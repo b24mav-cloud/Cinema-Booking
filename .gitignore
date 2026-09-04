@@ -1,0 +1,6 @@
+**/bin/
+**/obj/
+**/cinema.db
+**/cinema.db-shm
+**/cinema.db-wal
+.vs/
