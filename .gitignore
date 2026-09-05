@@ -1,17 +1,8 @@
 node_modules/
+.next/
+tsconfig.tsbuildinfo
 .env
 .env.*
 !.env.example
 .vercel/
 data/cinema.json
-
-# Generated .NET and local runtime files
-**/bin/
-**/obj/
-**/oracleJdk-*/
-**/cinema.db*
-
-# Nested copy/repository is not part of this repository
-Cinema-Booking/
-
-.vs/

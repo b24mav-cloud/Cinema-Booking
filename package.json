@@ -2,21 +2,30 @@
   "name": "cinema-booking-system",
   "version": "1.0.0",
   "private": true,
-  "description": "Vercel-compatible CinemaBooking application",
+  "description": "CinemaBooking built with Next.js, TypeScript, and Bootstrap",
   "type": "module",
   "scripts": {
-    "dev": "node server.js",
-    "build": "node --check api/index.js && node --check api/store.js && node --check server.js",
-    "start": "node server.js"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit"
   },
   "engines": {
     "node": ">=18"
   },
-  "dependencies": {
-    "@supabase/server": "^1.5.3",
+"dependencies": {
     "@supabase/supabase-js": "^2.115.0",
     "@upstash/redis": "^1.35.0",
-    "dotenv": "^17.4.2",
-    "jose": "^6.2.11"
+    "bootstrap": "^5.3.8",
+    "next": "^15.5.14",
+    "react": "^19.1.1",
+    "react-bootstrap": "^2.10.10",
+    "react-dom": "^19.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.30",
+    "@types/react": "^19.1.2",
+    "@types/react-dom": "^19.1.2",
+    "typescript": "^5.8.3"
   }
 }
