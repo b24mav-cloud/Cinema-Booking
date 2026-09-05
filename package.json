@@ -1,0 +1,18 @@
+{
+  "name": "cinema-booking-system",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Vercel-compatible CinemaBooking application",
+  "type": "module",
+  "scripts": {
+    "dev": "node server.js",
+    "build": "node --check api/index.js && node --check api/store.js && node --check server.js",
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@upstash/redis": "^1.35.0"
+  }
+}
