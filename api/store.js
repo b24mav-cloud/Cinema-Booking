@@ -4,8 +4,8 @@ import { fileURLToPath } from "node:url";
 
 const seed = () => {
   const movies = [
-    { id: 1, title: "Inception", synopsis: "A skilled extractor enters the dreams of others to steal secrets.", durationMinutes: 148, posterUrl: "https://image.tmdb.org/t/p/w500/oYuLEt3zVCKq57qu2F8dT7NIa6f.jpg", rating: "PG-13" },
-    { id: 2, title: "The Grand Budapest Hotel", synopsis: "A legendary concierge and his lobby boy become embroiled in a family inheritance.", durationMinutes: 100, posterUrl: "https://image.tmdb.org/t/p/w500/eWdyYQreja6JGCzqHWXpWHDrrPo.jpg", rating: "R" }
+    { id: 1, title: "Inception", synopsis: "A skilled extractor enters the dreams of others to steal secrets.", durationMinutes: 148, posterUrl: "https://image.tmdb.org/t/p/w500/oYuLEt3zVCKq57qu2F8dT7NIa6f.jpg", rating: "PG-13", experience: "IMAX", tags: ["Sci-fi", "Mind-bending"], basePrice: 520 },
+    { id: 2, title: "The Grand Budapest Hotel", synopsis: "A legendary concierge and his lobby boy become embroiled in a family inheritance.", durationMinutes: 100, posterUrl: "https://image.tmdb.org/t/p/w500/eWdyYQreja6JGCzqHWXpWHDrrPo.jpg", rating: "R", experience: "Director's Cut", tags: ["Comedy", "Classic"], basePrice: 450 }
   ];
   const tomorrow = new Date();
   tomorrow.setUTCHours(0, 0, 0, 0);
@@ -15,10 +15,10 @@ const seed = () => {
     number: (i % 10) + 1, price: 10, status: "Available"
   }));
   const showtimes = [
-    { id: 1, movieId: 1, startTime: new Date(tomorrow.getTime() + 18 * 3600000).toISOString(), auditorium: "Auditorium 1", seats: makeSeats(1) },
-    { id: 2, movieId: 2, startTime: new Date(tomorrow.getTime() + (20 * 60 + 30) * 60000).toISOString(), auditorium: "Auditorium 2", seats: makeSeats(2) }
+    { id: 1, movieId: 1, branch: "Riverside Nine", experience: "IMAX", price: 520, startTime: new Date(tomorrow.getTime() + 18 * 3600000).toISOString(), auditorium: "Auditorium 1", seats: makeSeats(1).map(s => ({ ...s, price: 520 })) },
+    { id: 2, movieId: 2, branch: "Union Street", experience: "Director's Cut", price: 450, startTime: new Date(tomorrow.getTime() + (20 * 60 + 30) * 60000).toISOString(), auditorium: "Auditorium 2", seats: makeSeats(2).map(s => ({ ...s, price: 450 })) }
   ];
-  return { movies, showtimes, bookings: [] };
+  return { branches: ["Riverside Nine", "Union Street"], movies, showtimes, bookings: [] };
 };
 
 const localFile = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "data", "cinema.json");
@@ -54,6 +54,22 @@ export async function readStore() {
     memory = seed();
     await writeStore(memory);
   }
+  // Keep older local stores deployable while adding the richer booking catalog.
+  let changed = false;
+  const branches = memory.branches ?? ["Riverside Nine", "Union Street"];
+  if (!memory.branches) { memory.branches = branches; changed = true; }
+  memory.movies = memory.movies.map((movie, index) => {
+    const next = { ...movie, experience: movie.experience ?? (index === 0 ? "IMAX" : "Director's Cut"), tags: movie.tags ?? (index === 0 ? ["Sci-fi", "Mind-bending"] : ["Comedy", "Classic"]), basePrice: movie.basePrice ?? (index === 0 ? 520 : 450) };
+    changed ||= next.experience !== movie.experience || next.basePrice !== movie.basePrice;
+    return next;
+  });
+  memory.showtimes = memory.showtimes.map((showtime, index) => {
+    const price = showtime.price ?? (showtime.movieId === 1 ? 520 : 450);
+    const next = { ...showtime, branch: showtime.branch ?? branches[index % branches.length], experience: showtime.experience ?? (showtime.movieId === 1 ? "IMAX" : "Director's Cut"), price, seats: showtime.seats.map(seat => ({ ...seat, price })) };
+    changed ||= !showtime.branch || showtime.price !== price;
+    return next;
+  });
+  if (changed) await writeStore(memory);
   return structuredClone(memory);
 }
 

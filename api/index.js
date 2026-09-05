@@ -27,6 +27,7 @@ export default async function handler(req, res) {
   try {
     const store = await readStore();
     if (resource === "health" && req.method === "GET") return json(res, 200, { status: "healthy" });
+    if (resource === "branches" && req.method === "GET") return json(res, 200, store.branches ?? [...new Set(store.showtimes.map(item => item.branch).filter(Boolean))]);
     if (resource === "movies" && req.method === "GET") {
       const movies = id ? store.movies.filter(item => item.id === Number(id)) : store.movies;
       return movies.length ? json(res, 200, id ? decorateMovie(movies[0], store) : movies.map(item => decorateMovie(item, store))) : json(res, 404, {});
@@ -59,7 +60,11 @@ export default async function handler(req, res) {
       if (seats.length !== seatIds.length) return json(res, 400, "One or more seats do not belong to the selected showtime.");
       if (seats.some(seat => seat.status !== "Available")) return json(res, 409, "One or more selected seats are no longer available.");
       seats.forEach(seat => { seat.status = "Reserved"; });
-      const booking = { id: randomUUID(), showtimeId: showtime.id, userEmail: input.userEmail.trim(), seatIds, totalAmount: seats.reduce((total, seat) => total + seat.price, 0), createdAt: new Date().toISOString(), isConfirmed: false };
+      const catalog = { popcorn: { name: "Classic popcorn", price: 180 }, combo: { name: "Movie night combo", price: 320 }, nachos: { name: "Loaded nachos", price: 220 } };
+      const addOns = [...new Set(input.addOns ?? [])].filter(item => catalog[item]).map(item => ({ id: item, ...catalog[item] }));
+      const seatTotal = seats.reduce((total, seat) => total + Number(seat.price || 0), 0);
+      const totalAmount = seatTotal + addOns.reduce((total, item) => total + item.price, 0);
+      const booking = { id: randomUUID(), showtimeId: showtime.id, userEmail: input.userEmail.trim(), seatIds, addOns, paymentMethod: input.paymentMethod ?? "GCash", totalAmount, createdAt: new Date().toISOString(), isConfirmed: false };
       store.bookings.push(booking);
       await writeStore(store);
       return json(res, 201, booking, { Location: `/api/bookings/${booking.id}` });
