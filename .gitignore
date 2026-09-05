@@ -10,3 +10,5 @@ data/cinema.json
 
 # Nested copy/repository is not part of this repository
 Cinema-Booking/
+
+.vs/
