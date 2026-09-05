@@ -33,7 +33,16 @@ export default async function handler(req, res) {
     if (resource === "auth" && parts[1] === "signin" && req.method === "POST") {
       const input = await body(req);
       if (!input?.email?.trim() || !input?.password) return json(res, 400, "Email and password are required.");
-      const result = await signIn(input.email.trim(), input.password);
+      if (!isAuthConfigured()) {
+        return json(res, 503, "Supabase authentication is not configured. Set SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY before starting the server.");
+      }
+      let result;
+      try {
+        result = await signIn(input.email.trim(), input.password);
+      } catch (error) {
+        console.error("Supabase sign-in failed:", error);
+        return json(res, 502, "Supabase could not be reached. Check the Supabase URL, publishable key, and network connection.");
+      }
       if (result.error || !result.data.session) return json(res, 401, result.error?.message ?? "Unable to sign in.");
       setSession(res, result.data.session);
       const signedInUser = result.data.user;
