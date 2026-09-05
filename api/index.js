@@ -39,7 +39,9 @@ export default async function handler(req, res) {
     if (resource === "showtimes" && req.method === "POST" && !id) {
       const input = await body(req);
       if (!input || !Number.isInteger(input.movieId) || !store.movies.some(movie => movie.id === input.movieId)) return json(res, 400, "Movie does not exist.");
-      const showtime = { id: Math.max(0, ...store.showtimes.map(item => item.id)) + 1, movieId: input.movieId, startTime: new Date(input.startTime).toISOString(), auditorium: input.auditorium ?? "", seats: (input.seats?.length ? input.seats : Array.from({ length: 30 }, (_, i) => ({ row: String.fromCharCode(65 + Math.floor(i / 10)), number: i % 10 + 1, price: 10 }))).map((seat, i) => ({ id: (Math.max(0, ...store.showtimes.map(item => item.id)) + 1) * 100 + i + 1, showtimeId: 0, row: seat.row, number: seat.number, price: Number(seat.price), status: "Available" })) };
+      const auditorium = input.auditorium ?? "";
+      const auditoriumType = input.auditoriumType === "vip" || auditorium.toLowerCase().includes("vip") ? "vip" : "regular";
+      const showtime = { id: Math.max(0, ...store.showtimes.map(item => item.id)) + 1, movieId: input.movieId, startTime: new Date(input.startTime).toISOString(), auditorium, auditoriumType, seats: (input.seats?.length ? input.seats : Array.from({ length: auditoriumType === "vip" ? 12 : 30 }, (_, i) => ({ row: String.fromCharCode(65 + Math.floor(i / (auditoriumType === "vip" ? 6 : 10))), number: i % (auditoriumType === "vip" ? 6 : 10) + 1, price: auditoriumType === "vip" ? 780 : 10 }))).map((seat, i) => ({ id: (Math.max(0, ...store.showtimes.map(item => item.id)) + 1) * 100 + i + 1, showtimeId: 0, row: seat.row, number: seat.number, price: Number(seat.price), status: "Available" })) };
       showtime.seats.forEach(seat => { seat.showtimeId = showtime.id; });
       store.showtimes.push(showtime);
       await writeStore(store);

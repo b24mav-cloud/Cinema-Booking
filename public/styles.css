@@ -35,3 +35,38 @@
 .coverflow-slide:not(.is-active) figcaption small,.coverflow-slide:not(.is-active) figcaption span{visibility:hidden}
 @media(max-width:900px){.coverflow-slide figcaption small{display:none}.coverflow-slide figcaption{padding:13px}.coverflow-slide figcaption strong{font-size:16px}.coverflow-slide{--offset:140px!important}}
 @media(prefers-reduced-motion:reduce){.coverflow-slide{transition:opacity .25s ease,transform .25s ease}.coverflow-slide:not(.is-active){filter:none}}
+/* Layout and interaction refinements */
+:root{--gold:#c99a5a;--gold2:#e3bb80}
+body{font-family:"Inter",sans-serif;font-variant-numeric:tabular-nums}
+h1,h2,h3,.hero-carousel-copy h2,.coverflow-slide figcaption strong{font-family:"Fraunces",Georgia,serif}
+.hero{height:auto;min-height:0;display:block;padding:78px 8% 0;overflow:hidden}
+.hero-copy{max-width:560px}
+.hero-carousel{width:calc(100% + 16vw);margin:64px -8vw 0;padding-bottom:26px}
+.coverflow-viewport{width:100%;overflow:hidden}
+.coverflow-track{min-height:350px}
+.coverflow-slide{width:210px;height:320px}
+.coverflow-slide:not(.is-active){transform:translateX(calc(-50% + var(--offset))) scale(.86)}
+.coverflow-slide.is-near:not(.is-active){opacity:.58}
+.hero-carousel-panel{max-width:640px;margin:0 auto;padding:18px 0 0}
+.booking{padding-top:96px}
+.section-intro{color:var(--muted);margin:12px 0 0}
+.showtime small{display:flex;align-items:center;gap:7px}
+.vip-badge{display:inline-block;border:1px solid #77818a;background:#26313a;color:#d5dadd;border-radius:999px;font-size:9px;font-weight:700;letter-spacing:.1em;padding:3px 7px;text-transform:uppercase;vertical-align:middle}
+.seat-map.vip{gap:18px;padding-inline:10%}
+.seat-map.vip .seat-row{gap:14px}
+.seat-map.vip .seat{height:38px;border-radius:10px}
+.seat-map.vip .seat-row{grid-template-columns:18px repeat(10,1fr)}
+.seat-map .seat{font-variant-numeric:tabular-nums}
+.how{padding-top:96px}
+@media(max-width:700px){
+  .hero{padding:52px 5% 0}
+  .hero-carousel{width:calc(100% + 10vw);margin:40px -5vw 0}
+  .coverflow-track{min-height:270px}
+  .coverflow-slide{width:180px;height:260px}
+  .coverflow-slide:not(.is-active){transform:translateX(calc(-50% + var(--offset))) scale(.86)}
+  .coverflow-slide{--offset:136px!important}
+  .coverflow-slide figcaption small{display:none}
+  .booking{padding-top:96px}
+  .seat-map.vip{padding-inline:0}
+  .seat-map.vip .seat-row{gap:8px}
+}

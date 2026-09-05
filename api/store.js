@@ -14,11 +14,17 @@ const seed = () => {
     id: showtimeId * 100 + i + 1, showtimeId, row: String.fromCharCode(65 + Math.floor(i / 10)),
     number: (i % 10) + 1, price: 10, status: "Available"
   }));
+  const makeVipSeats = (showtimeId) => Array.from({ length: 12 }, (_, i) => ({
+    id: showtimeId * 100 + i + 1, showtimeId, row: String.fromCharCode(65 + Math.floor(i / 6)),
+    number: (i % 6) + 1, price: 780, status: "Available"
+  }));
   const showtimes = [
-    { id: 1, movieId: 1, branch: "Riverside Nine", experience: "IMAX", price: 520, startTime: new Date(tomorrow.getTime() + 18 * 3600000).toISOString(), auditorium: "Auditorium 1", seats: makeSeats(1).map(s => ({ ...s, price: 520 })) },
-    { id: 2, movieId: 2, branch: "Union Street", experience: "Director's Cut", price: 450, startTime: new Date(tomorrow.getTime() + (20 * 60 + 30) * 60000).toISOString(), auditorium: "Auditorium 2", seats: makeSeats(2).map(s => ({ ...s, price: 450 })) }
+    { id: 1, experience: "IMAX", price: 520, startTime: new Date(tomorrow.getTime() + 18 * 3600000).toISOString(), auditorium: "Auditorium 1", auditoriumType: "regular", seats: makeSeats(1).map(s => ({ ...s, price: 520 })) },
+    { id: 2, experience: "Director's Cut", price: 450, startTime: new Date(tomorrow.getTime() + (20 * 60 + 30) * 60000).toISOString(), auditorium: "Auditorium 2", auditoriumType: "regular", seats: makeSeats(2).map(s => ({ ...s, price: 450 })) },
+    { id: 3, movieId: 1, experience: "Premium", price: 780, startTime: new Date(tomorrow.getTime() + 21 * 3600000).toISOString(), auditorium: "Auditorium 7 — VIP", auditoriumType: "vip", seats: makeVipSeats(3) }
   ];
-  return { branches: ["Riverside Nine", "Union Street"], movies, showtimes, bookings: [] };
+  showtimes[0].movieId = 1;
+  return { branches: ["CinemaBooking"], auditoriums: ["Auditorium 1", "Auditorium 2", "Auditorium 3", "Auditorium 4", "Auditorium 5", "Auditorium 6", "Auditorium 7 — VIP"], movies, showtimes, bookings: [] };
 };
 
 const localFile = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "data", "cinema.json");
@@ -56,8 +62,10 @@ export async function readStore() {
   }
   // Keep older local stores deployable while adding the richer booking catalog.
   let changed = false;
-  const branches = memory.branches ?? ["Riverside Nine", "Union Street"];
-  if (!memory.branches) { memory.branches = branches; changed = true; }
+  const branches = ["CinemaBooking"];
+  const auditoriums = ["Auditorium 1", "Auditorium 2", "Auditorium 3", "Auditorium 4", "Auditorium 5", "Auditorium 6", "Auditorium 7 — VIP"];
+  if (JSON.stringify(memory.branches) !== JSON.stringify(branches)) { memory.branches = branches; changed = true; }
+  if (JSON.stringify(memory.auditoriums) !== JSON.stringify(auditoriums)) { memory.auditoriums = auditoriums; changed = true; }
   memory.movies = memory.movies.map((movie, index) => {
     const next = { ...movie, experience: movie.experience ?? (index === 0 ? "IMAX" : "Director's Cut"), tags: movie.tags ?? (index === 0 ? ["Sci-fi", "Mind-bending"] : ["Comedy", "Classic"]), basePrice: movie.basePrice ?? (index === 0 ? 520 : 450) };
     changed ||= next.experience !== movie.experience || next.basePrice !== movie.basePrice;
@@ -65,10 +73,23 @@ export async function readStore() {
   });
   memory.showtimes = memory.showtimes.map((showtime, index) => {
     const price = showtime.price ?? (showtime.movieId === 1 ? 520 : 450);
-    const next = { ...showtime, branch: showtime.branch ?? branches[index % branches.length], experience: showtime.experience ?? (showtime.movieId === 1 ? "IMAX" : "Director's Cut"), price, seats: showtime.seats.map(seat => ({ ...seat, price })) };
-    changed ||= !showtime.branch || showtime.price !== price;
+    const next = { ...showtime, branch: undefined, auditoriumType: showtime.auditoriumType ?? (showtime.auditorium?.toLowerCase().includes("vip") ? "vip" : "regular"), experience: showtime.experience ?? (showtime.movieId === 1 ? "IMAX" : "Director's Cut"), price, seats: showtime.seats.map(seat => ({ ...seat, price })) };
+    changed ||= Boolean(showtime.branch) || showtime.price !== price || !showtime.auditoriumType;
     return next;
   });
+  if (!memory.showtimes.some(showtime => showtime.auditoriumType === "vip")) {
+    const id = Math.max(0, ...memory.showtimes.map(showtime => showtime.id)) + 1;
+    const startTime = new Date(Math.max(...memory.showtimes.map(showtime => new Date(showtime.startTime).getTime())) + 90 * 60000).toISOString();
+    memory.showtimes.push({
+      id, movieId: memory.movies[0].id, experience: "Premium", price: 780, startTime,
+      auditorium: "Auditorium 7 — VIP", auditoriumType: "vip",
+      seats: Array.from({ length: 12 }, (_, i) => ({
+        id: id * 100 + i + 1, showtimeId: id, row: String.fromCharCode(65 + Math.floor(i / 6)),
+        number: i % 6 + 1, price: 780, status: "Available"
+      }))
+    });
+    changed = true;
+  }
   if (changed) await writeStore(memory);
   return structuredClone(memory);
 }

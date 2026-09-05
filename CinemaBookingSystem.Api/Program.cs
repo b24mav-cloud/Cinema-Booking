@@ -35,6 +35,7 @@ using (var scope = app.Services.CreateScope())
                 MovieId = 1,
                 StartTime = tomorrow.AddHours(18),
                 Auditorium = "Auditorium 1",
+                AuditoriumType = "regular",
                 Seats = CreateDemoSeats()
             },
             new Showtime
@@ -42,6 +43,7 @@ using (var scope = app.Services.CreateScope())
                 MovieId = 2,
                 StartTime = tomorrow.AddHours(20).AddMinutes(30),
                 Auditorium = "Auditorium 2",
+                AuditoriumType = "regular",
                 Seats = CreateDemoSeats()
             }
         };

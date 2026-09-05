@@ -50,7 +50,11 @@ public class ShowtimesController(CinemaDbContext db) : ControllerBase
             StartTime = request.StartTime.Kind == DateTimeKind.Unspecified
                 ? DateTime.SpecifyKind(request.StartTime, DateTimeKind.Utc)
                 : request.StartTime.ToUniversalTime(),
-            Auditorium = request.Auditorium ?? string.Empty
+            Auditorium = request.Auditorium ?? string.Empty,
+            AuditoriumType = request.AuditoriumType?.Equals("vip", StringComparison.OrdinalIgnoreCase) == true
+                || request.Auditorium?.Contains("VIP", StringComparison.OrdinalIgnoreCase) == true
+                ? "vip"
+                : "regular"
         };
 
         var seats = request.Seats?.Count > 0
@@ -81,6 +85,7 @@ public sealed record CreateShowtimeRequest(
     int MovieId,
     DateTime StartTime,
     string? Auditorium,
-    List<CreateSeatRequest>? Seats);
+    List<CreateSeatRequest>? Seats,
+    string? AuditoriumType = null);
 
 public sealed record CreateSeatRequest(string Row, int Number, decimal Price);
