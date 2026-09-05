@@ -67,8 +67,8 @@ export async function readStore() {
   if (JSON.stringify(memory.branches) !== JSON.stringify(branches)) { memory.branches = branches; changed = true; }
   if (JSON.stringify(memory.auditoriums) !== JSON.stringify(auditoriums)) { memory.auditoriums = auditoriums; changed = true; }
   memory.movies = memory.movies.map((movie, index) => {
-    const next = { ...movie, experience: movie.experience ?? (index === 0 ? "IMAX" : "Director's Cut"), tags: movie.tags ?? (index === 0 ? ["Sci-fi", "Mind-bending"] : ["Comedy", "Classic"]), basePrice: movie.basePrice ?? (index === 0 ? 520 : 450) };
-    changed ||= next.experience !== movie.experience || next.basePrice !== movie.basePrice;
+    const next = { ...movie, status: movie.status ?? "now showing", description: movie.description ?? movie.synopsis ?? "", genre: movie.genre ?? movie.tags?.[0] ?? "Drama", cast: movie.cast ?? "", releaseDate: movie.releaseDate ?? null, experience: movie.experience ?? (index === 0 ? "IMAX" : "Director's Cut"), tags: movie.tags ?? (index === 0 ? ["Sci-fi", "Mind-bending"] : ["Comedy", "Classic"]), basePrice: movie.basePrice ?? (index === 0 ? 520 : 450) };
+    changed ||= next.experience !== movie.experience || next.basePrice !== movie.basePrice || next.status !== movie.status;
     return next;
   });
   memory.showtimes = memory.showtimes.map((showtime, index) => {

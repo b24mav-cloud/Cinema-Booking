@@ -70,3 +70,19 @@ h1,h2,h3,.hero-carousel-copy h2,.coverflow-slide figcaption strong{font-family:"
   .seat-map.vip{padding-inline:0}
   .seat-map.vip .seat-row{gap:8px}
 }
+.auth-page,.account-page,.admin-page{padding-block:96px}
+.auth-card{max-width:480px;margin:0 auto;display:grid;gap:16px}
+.auth-card h1,.account-page h1,.admin-page h1{font:500 clamp(42px,7vw,72px)/1 "Fraunces",Georgia,serif;margin:0}
+.field{display:grid;gap:7px;color:var(--muted);font-size:11px}
+.field input{background:var(--panel);border:1px solid var(--line);color:var(--ink);padding:12px}
+.error{border:1px solid var(--red);color:#f0aa9c;padding:10px;font-size:12px}
+.account-list{display:grid;gap:16px;margin-top:36px}
+.account-booking{display:flex;justify-content:space-between;gap:24px;align-items:center;background:var(--panel);border:1px solid var(--line);padding:24px}
+.account-booking h2{font:500 28px "Fraunces",Georgia,serif;margin:0 0 8px}
+.account-booking strong{display:block;color:var(--gold2);font-size:20px;margin-bottom:12px}
+.admin-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin:36px 0 48px}
+.admin-stats .summary-card{display:grid;gap:12px}
+.admin-stats strong{font-size:38px;color:var(--gold2)}
+.admin-placeholder{max-width:720px}
+.admin-table-wrap{overflow:auto}.admin-table{border-collapse:collapse;width:100%;font-size:12px}.admin-table th,.admin-table td{border-bottom:1px solid var(--line);padding:13px 8px;text-align:left;white-space:nowrap}.admin-table th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform:uppercase}.admin-table .button{padding:7px 10px;font-size:10px}
+@media(max-width:700px){.admin-stats{grid-template-columns:repeat(2,1fr)}.account-booking{align-items:flex-start;flex-direction:column}.account-booking>div:last-child{width:100%}}

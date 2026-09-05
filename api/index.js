@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { readStore, writeStore } from "./store.js";
+import { clearSession, getSessionUser, isAuthConfigured, requireUser, setSession, signIn } from "./auth.js";
 
 const json = (res, status, body, headers = {}) => {
   res.statusCode = status;
@@ -26,10 +27,72 @@ export default async function handler(req, res) {
   const id = parts[1];
   try {
     const store = await readStore();
+    if (resource === "auth" && parts[1] === "me" && req.method === "GET") {
+      return json(res, 200, { configured: isAuthConfigured(), user: await getSessionUser(req, res) });
+    }
+    if (resource === "auth" && parts[1] === "signin" && req.method === "POST") {
+      const input = await body(req);
+      if (!input?.email?.trim() || !input?.password) return json(res, 400, "Email and password are required.");
+      const result = await signIn(input.email.trim(), input.password);
+      if (result.error || !result.data.session) return json(res, 401, result.error?.message ?? "Unable to sign in.");
+      setSession(res, result.data.session);
+      const signedInUser = result.data.user;
+      return json(res, 200, { user: {
+        id: signedInUser.id,
+        email: signedInUser.email ?? "",
+        role: signedInUser.app_metadata?.role === "admin" || signedInUser.user_metadata?.role === "admin" ? "admin" : "customer"
+      }});
+    }
+    if (resource === "auth" && parts[1] === "signout" && req.method === "POST") {
+      clearSession(res);
+      return json(res, 204, {});
+    }
+    if (resource === "account" && req.method === "GET") {
+      const auth = await requireUser(req, res, "customer");
+      if (auth.error) return json(res, auth.status, auth.error);
+      const bookings = store.bookings.filter(item => item.customerId === auth.user.id || (!item.customerId && item.userEmail === auth.user.email));
+      return json(res, 200, bookings.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).map(item => ({
+        ...item,
+        showtime: decorateShowtime(store.showtimes.find(showtime => showtime.id === item.showtimeId), store)
+      })));
+    }
+    if (resource === "admin" && parts[1] === "dashboard" && req.method === "GET") {
+      const auth = await requireUser(req, res, "admin");
+      if (auth.error) return json(res, auth.status, auth.error);
+      const today = new Date().toISOString().slice(0, 10);
+      return json(res, 200, {
+        moviesCurrentlyShowing: store.movies.filter(movie => movie.status !== "archived" && movie.status !== "coming soon").length,
+        upcomingMovies: store.movies.filter(movie => movie.status === "coming soon").length,
+        archivedMovies: store.movies.filter(movie => movie.status === "archived").length,
+        todaysBookings: store.bookings.filter(booking => booking.createdAt?.slice(0, 10) === today).length
+      });
+    }
+    if (resource === "admin" && parts[1] === "movies") {
+      const auth = await requireUser(req, res, "admin");
+      if (auth.error) return json(res, auth.status, auth.error);
+      if (req.method === "GET") return json(res, 200, store.movies);
+      const input = await body(req);
+      if (req.method === "POST") {
+        if (!input?.title?.trim()) return json(res, 400, "Movie title is required.");
+        const movie = { id: Math.max(0, ...store.movies.map(item => item.id)) + 1, title: input.title.trim(), description: input.description ?? "", synopsis: input.description ?? "", genre: input.genre ?? "", cast: input.cast ?? "", durationMinutes: Number(input.durationMinutes ?? 0), posterUrl: input.posterUrl ?? "", status: input.status ?? "coming soon", releaseDate: input.releaseDate ?? null, tags: input.genre ? [input.genre] : [], basePrice: Number(input.basePrice ?? 450) };
+        store.movies.push(movie);
+        await writeStore(store);
+        return json(res, 201, movie);
+      }
+      if (req.method === "PATCH" && parts[2]) {
+        const movie = store.movies.find(item => item.id === Number(parts[2]));
+        if (!movie) return json(res, 404, "Movie was not found.");
+        Object.assign(movie, input ?? {});
+        if (input?.status === "archived") movie.archivedAt = new Date().toISOString();
+        await writeStore(store);
+        return json(res, 200, movie);
+      }
+    }
     if (resource === "health" && req.method === "GET") return json(res, 200, { status: "healthy" });
     if (resource === "branches" && req.method === "GET") return json(res, 200, store.branches ?? [...new Set(store.showtimes.map(item => item.branch).filter(Boolean))]);
     if (resource === "movies" && req.method === "GET") {
-      const movies = id ? store.movies.filter(item => item.id === Number(id)) : store.movies;
+      const visibleMovies = store.movies.filter(item => item.status !== "archived");
+      const movies = id ? visibleMovies.filter(item => item.id === Number(id)) : visibleMovies;
       return movies.length ? json(res, 200, id ? decorateMovie(movies[0], store) : movies.map(item => decorateMovie(item, store))) : json(res, 404, {});
     }
     if (resource === "showtimes" && req.method === "GET") {
@@ -66,7 +129,8 @@ export default async function handler(req, res) {
       const addOns = [...new Set(input.addOns ?? [])].filter(item => catalog[item]).map(item => ({ id: item, ...catalog[item] }));
       const seatTotal = seats.reduce((total, seat) => total + Number(seat.price || 0), 0);
       const totalAmount = seatTotal + addOns.reduce((total, item) => total + item.price, 0);
-      const booking = { id: randomUUID(), showtimeId: showtime.id, userEmail: input.userEmail.trim(), seatIds, addOns, paymentMethod: input.paymentMethod ?? "GCash", totalAmount, createdAt: new Date().toISOString(), isConfirmed: false };
+      const customer = await getSessionUser(req, res);
+      const booking = { id: randomUUID(), showtimeId: showtime.id, customerId: customer?.role === "customer" ? customer.id : null, userEmail: input.userEmail.trim(), movieTitle: store.movies.find(movie => movie.id === showtime.movieId)?.title ?? "Unknown movie", auditorium: showtime.auditorium, seatSnapshot: seats.map(seat => ({ row: seat.row, number: seat.number, price: seat.price })), addOns, paymentMethod: input.paymentMethod ?? "GCash", totalAmount, createdAt: new Date().toISOString(), isConfirmed: false };
       store.bookings.push(booking);
       await writeStore(store);
       return json(res, 201, booking, { Location: `/api/bookings/${booking.id}` });

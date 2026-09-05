@@ -1,0 +1,9 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Your account | CinemaBooking</title><link rel="stylesheet" href="styles.css"></head>
+<body><header class="site-header"><nav class="nav shell"><a class="brand" href="/"><span class="brand-mark">CB</span><span>CinemaBooking</span></a><div><a class="text-link" href="/">Book again</a> <button class="button" id="signout" type="button">Sign out</button></div></nav></header>
+<main class="account-page shell"><p class="kicker">YOUR ACCOUNT</p><h1>Your bookings.</h1><p class="muted">Your most recent reservations appear first.</p><section id="bookings" class="account-list"></section></main>
+<script>
+const peso=n=>`₱${Number(n).toLocaleString("en-PH",{minimumFractionDigits:2})}`;const bookings=document.querySelector("#bookings");
+async function load(){const result=await fetch("/api/account");if(!result.ok){location.href="/signin.html?next=/account.html";return}const items=await result.json();bookings.innerHTML=items.length?items.map(item=>`<article class="account-booking"><div><p class="kicker">${item.isConfirmed?"CONFIRMED":"PENDING"}</p><h2>${item.movieTitle}</h2><p class="muted">${new Date(item.showtime.startTime).toLocaleString([], {dateStyle:"medium",timeStyle:"short"})} · ${item.auditorium}</p><p>Seats: ${(item.seatSnapshot||[]).map(seat=>seat.row+seat.number).join(", ")||"—"}</p></div><div><strong>${peso(item.totalAmount)}</strong><br><a class="button gold-button" href="/account.html#${item.id}">View receipt</a></div></article>`).join(""):"<div class='summary-card'><h2>No bookings yet.</h2><p class='muted'>Choose a film and your next receipt will appear here.</p><a class='button gold-button' href='/'>Browse films <span>→</span></a></div>"}
+document.querySelector("#signout").addEventListener("click",async()=>{await fetch("/api/auth/signout",{method:"POST"});location.href="/"});load();
+</script></body></html>
