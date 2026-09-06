@@ -29,6 +29,12 @@ export function getAdminClient() {
 
 const cookieName = "cinema_session";
 
+// Shorter idle timeout for admins, who can modify cinema data.
+const SESSION_IDLE_SECONDS: Record<"admin" | "customer", number> = {
+  admin: 20 * 60,
+  customer: 30 * 24 * 60 * 60
+};
+
 const parseCookies = (header: string | undefined) =>
   Object.fromEntries(
     (header ?? "")
@@ -44,12 +50,15 @@ const sessionCookie = (session: { access_token: string; refresh_token: string })
   Buffer.from(JSON.stringify({ access_token: session.access_token, refresh_token: session.refresh_token })).toString("base64url");
 
 export const clearSession = (res: NextApiResponse) => {
-  res.setHeader("Set-Cookie", `${cookieName}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`);
+  res.setHeader("Set-Cookie", `${cookieName}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`);
 };
 
-export const setSession = (res: NextApiResponse, session: { access_token: string; refresh_token: string; expires_in?: number }) => {
-  res.setHeader("Set-Cookie", `${cookieName}=${sessionCookie(session)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${Math.max(60, session.expires_in ?? 3600)}`);
+export const setSession = (res: NextApiResponse, session: { access_token: string; refresh_token: string; expires_in?: number }, role: "admin" | "customer" = "customer") => {
+  res.setHeader("Set-Cookie", `${cookieName}=${sessionCookie(session)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${SESSION_IDLE_SECONDS[role]}`);
 };
+
+const roleOf = (user: { app_metadata?: Record<string, unknown> | null; user_metadata?: Record<string, unknown> | null }): "admin" | "customer" =>
+  user.app_metadata?.role === "admin" || user.user_metadata?.role === "admin" ? "admin" : "customer";
 
 export const getSessionUser = async (req: NextApiRequest, res: NextApiResponse): Promise<AuthUser | null> => {
   const client = getSupabase();
@@ -67,7 +76,7 @@ export const getSessionUser = async (req: NextApiRequest, res: NextApiResponse):
   if (result.error && session.refresh_token) {
     const refreshed = await client.auth.refreshSession({ refresh_token: session.refresh_token });
     if (refreshed.data.session) {
-      setSession(res, refreshed.data.session);
+      setSession(res, refreshed.data.session, roleOf(refreshed.data.session.user));
       result = await client.auth.getUser(refreshed.data.session.access_token);
     }
   }
@@ -79,7 +88,7 @@ export const getSessionUser = async (req: NextApiRequest, res: NextApiResponse):
   return {
     id: user.id,
     email: user.email ?? "",
-    role: user.app_metadata?.role === "admin" || user.user_metadata?.role === "admin" ? "admin" : "customer",
+    role: roleOf(user),
     metadata: user.user_metadata ?? {}
   };
 };

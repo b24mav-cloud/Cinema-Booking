@@ -1,5 +1,7 @@
-export type SeatStatus = "Available" | "Reserved";
-export type Seat = { id: number; row: string; number: number; price: number; status: SeatStatus };
+export type SeatStatus = "Available" | "Reserved" | "OutOfService";
+export type Seat = { id: number; row: string; number: number; price: number; status: SeatStatus; variant?: "standard" | "recliner" };
+export type AuditoriumStatus = "Open" | "Maintenance" | "Closed";
+export type Auditorium = { id: number; name: string; type: "regular" | "vip"; status: AuditoriumStatus; seats: Seat[] };
 export type Movie = { id: number; title: string; synopsis?: string; description?: string; durationMinutes: number; posterUrl: string; rating?: string; experience?: string; tags?: string[]; basePrice?: number; status?: string; genre?: string; cast?: string; releaseDate?: string | null; archivedAt?: string };
 export type MovieWithShowtimes = Movie & { showtimes: Showtime[] };
 export type Showtime = { id: number; movieId: number; startTime: string; auditorium: string; auditoriumType?: "regular" | "vip"; experience?: string; price?: number; seats: Seat[] };
@@ -24,7 +26,7 @@ export type Booking = {
 };
 export type Store = {
   branches: string[];
-  auditoriums: string[];
+  auditoriums: Auditorium[];
   movies: Movie[];
   showtimes: Showtime[];
   bookings: Booking[];
@@ -35,6 +37,9 @@ export type Dashboard = {
   upcomingMovies: number;
   archivedMovies: number;
   todaysBookings: number;
+  auditoriumsOpen: number;
+  auditoriumsTotal: number;
+  auditoriums: { id: number; name: string; type: "regular" | "vip"; status: AuditoriumStatus; seatCount: number }[];
 };
 export const addOns: AddOn[] = [
   { id: "popcorn", name: "Classic popcorn", description: "Freshly popped, salted just right", price: 180, icon: "🍿" },

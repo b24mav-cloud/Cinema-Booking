@@ -1,9 +1,9 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import Head from "next/head";
 import { SiteHeader } from "../components/SiteHeader";
+import { HeroCarousel } from "../components/HeroCarousel";
 import { addOns, Movie, peso, Showtime } from "../lib/types";
 
-const featured = ["Inception", "The Grand Budapest Hotel"];
 export default function Home() {
   const [movies, setMovies] = useState<Movie[]>([]); const [showtimes, setShowtimes] = useState<Showtime[]>([]);
   const [movie, setMovie] = useState<Movie>(); const [showtime, setShowtime] = useState<Showtime>();
@@ -18,7 +18,7 @@ export default function Home() {
   const book = async (event: FormEvent) => { event.preventDefault(); try { const response = await fetch("/api/bookings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ showtimeId: showtime?.id, seatIds: seats, userEmail: email, addOns: extras, paymentMethod: payment }) }); if (!response.ok) throw new Error(await response.text()); const booking = await response.json(); await fetch(`/api/bookings/${booking.id}/confirm`, { method: "POST" }); setConfirmation(booking.id); } catch (err) { setError(err instanceof Error ? err.message : "Could not complete booking."); } };
   const order = <aside className="order-card"><p className="kicker">YOUR ORDER</p><h3>{movie?.title ?? "Select a film"}</h3><p className="muted">{showtime ? new Date(showtime.startTime).toLocaleString() : "Choose a showtime"}</p><div className="order-lines"><span>Seats ({seats.length}) <b>{peso(selectedSeats.reduce((sum, s) => sum + s.price, 0))}</b></span>{extras.map(id => { const a = addOns.find(x => x.id === id)!; return <span key={id}>{a.name}<b>{peso(a.price)}</b></span>; })}</div><div className="order-total"><span>Total</span><strong>{peso(total)}</strong></div></aside>;
   return <><Head><title>CinemaBooking — Your night, your way</title></Head><SiteHeader /><main>
-    <section className="hero shell"><div className="hero-copy"><p className="kicker"><span className="live-dot" /> THE CINEMA, REIMAGINED</p><h1>Your night.<br /><em>Your way.</em></h1><p>Premium screens, plush seats, and stories worth staying up for. Make your next movie night memorable.</p><a className="button gold-button" href="#booking">Book your experience →</a></div></section>
+    <section className="hero shell"><div className="hero-copy"><p className="kicker"><span className="live-dot" /> THE CINEMA, REIMAGINED</p><h1>Your night.<br /><em>Your way.</em></h1><p>Premium screens, plush seats, and stories worth staying up for. Make your next movie night memorable.</p><a className="button gold-button" href="#booking">Book your experience →</a></div><HeroCarousel /></section>
     <section className="booking shell" id="booking"><div className="section-heading"><div><p className="kicker">NOW SHOWING</p><h2>What will you watch?</h2><p className="section-intro">One cinema, seven auditoriums, and a seat waiting for you.</p></div></div>
       {error && <p className="error">{error}</p>}
       {!confirmation && <><div className="wizard">{["Select film", "Showtime", "Seats", "Add-ons", "Summary"].map((label, i) => <button className={`wizard-step ${step === i + 1 ? "active" : ""}`} onClick={() => i + 1 <= step && setStep(i + 1)} key={label}><b>0{i + 1}</b><span>{label}</span></button>)}</div>

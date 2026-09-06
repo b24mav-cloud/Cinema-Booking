@@ -1,13 +1,13 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { readStore, writeStore } from "../../../lib/api/store";
-import { createShowtime, decorateShowtime } from "../../../lib/api/cinema";
+import { createShowtime, decorateShowtime, isAuditoriumOpen } from "../../../lib/api/cinema";
 import { json, readBody, wrap } from "../../../lib/api/respond";
 import type { NewShowtimeInput } from "../../../lib/api/cinema";
 
 export default wrap(async (req: NextApiRequest, res: NextApiResponse) => {
   const store = await readStore();
   if (req.method === "GET") {
-    json(res, 200, store.showtimes.map(item => ({ ...decorateShowtime(item, store), seats: item.seats })));
+    json(res, 200, store.showtimes.filter(item => isAuditoriumOpen(store, item.auditorium)).map(item => ({ ...decorateShowtime(item, store), seats: item.seats })));
     return;
   }
   if (req.method === "POST") {

@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { readStore, writeStore } from "../../../lib/api/store";
-import { decorateShowtime } from "../../../lib/api/cinema";
+import { decorateShowtime, isAuditoriumOpen } from "../../../lib/api/cinema";
 import { getSessionUser } from "../../../lib/api/auth";
 import { json, readBody, wrap } from "../../../lib/api/respond";
 import type { AddOnSelection, SeatSnapshot } from "../../../lib/types";
@@ -27,6 +27,7 @@ export default wrap(async (req: NextApiRequest, res: NextApiResponse) => {
     if (!seatIds.length) return json(res, 400, "At least one seat is required.");
     const showtime = store.showtimes.find(item => item.id === Number(input.showtimeId));
     if (!showtime) return json(res, 404, `Showtime ${input.showtimeId} was not found.`);
+    if (!isAuditoriumOpen(store, showtime.auditorium)) return json(res, 409, "This auditorium is temporarily unavailable.");
     const seatObjects = showtime.seats.filter(seat => seatIds.includes(seat.id));
     if (seatObjects.length !== seatIds.length) return json(res, 400, "One or more seats do not belong to the selected showtime.");
     if (seatObjects.some(seat => seat.status !== "Available")) return json(res, 409, "One or more selected seats are no longer available.");

@@ -74,8 +74,26 @@ h1,h2,h3,.hero-carousel-copy h2,.coverflow-slide figcaption strong{font-family:"
 .auth-card{max-width:480px;margin:0 auto;display:grid;gap:16px}
 .auth-card h1,.account-page h1,.admin-page h1{font:500 clamp(42px,7vw,72px)/1 "Fraunces",Georgia,serif;margin:0}
 .field{display:grid;gap:7px;color:var(--muted);font-size:11px}
-.field input{background:var(--panel);border:1px solid var(--line);color:var(--ink);padding:12px}
+.field input{background:var(--panel);border:1px solid var(--line);color:var(--ink);padding:12px;min-width:0}
+.field-row{display:flex;justify-content:flex-end}
+.forgot-link{color:var(--muted);font-size:11px}
+.forgot-link:hover{color:var(--gold2)}
+.auth-foot{margin:0;text-align:center;font-size:12px}
+.auth-foot a{color:var(--gold2)}
+.notice{border:1px solid var(--gold);color:var(--gold2);padding:10px;font-size:12px}
+.password-checks{list-style:none;display:grid;gap:5px;margin:0;padding:0;color:var(--muted);font-size:11px}
+.password-checks li{display:flex;gap:8px;align-items:center}
+.password-checks li span{color:var(--muted);font-size:12px}
+.password-checks li.met{color:var(--gold2)}
+.password-checks li.met span{color:var(--gold)}
+.password-strength{height:3px;background:var(--line);margin:0;overflow:hidden}
+.password-strength span{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--gold2));transition:width .25s ease}
+.match{font-size:11px;margin:0}
+.match.ok{color:var(--gold2)}
+.match:not(.ok){color:var(--red)}
 .error{border:1px solid var(--red);color:#f0aa9c;padding:10px;font-size:12px}
+.nav-link-button{background:none;border:0;color:var(--muted);font-size:13px;font-family:inherit;cursor:pointer;padding:0}
+.nav-link-button:hover{color:var(--gold2)}
 .account-list{display:grid;gap:16px;margin-top:36px}
 .account-booking{display:flex;justify-content:space-between;gap:24px;align-items:center;background:var(--panel);border:1px solid var(--line);padding:24px}
 .account-booking h2{font:500 28px "Fraunces",Georgia,serif;margin:0 0 8px}
@@ -86,3 +104,81 @@ h1,h2,h3,.hero-carousel-copy h2,.coverflow-slide figcaption strong{font-family:"
 .admin-placeholder{max-width:720px}
 .admin-table-wrap{overflow:auto}.admin-table{border-collapse:collapse;width:100%;font-size:12px}.admin-table th,.admin-table td{border-bottom:1px solid var(--line);padding:13px 8px;text-align:left;white-space:nowrap}.admin-table th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform:uppercase}.admin-table .button{padding:7px 10px;font-size:10px}
 @media(max-width:700px){.admin-stats{grid-template-columns:repeat(2,1fr)}.account-booking{align-items:flex-start;flex-direction:column}.account-booking>div:last-child{width:100%}}
+
+/* Admin: movie editor + posters */
+.field textarea,.field select{background:var(--panel);border:1px solid var(--line);color:var(--ink);padding:12px;min-width:0;border-radius:0}
+.field textarea{resize:vertical}
+.admin-actions{display:flex;gap:10px;justify-content:flex-end;align-items:center}
+.movie-poster-thumb{width:44px;height:64px;object-fit:cover;background:var(--panel);border:1px solid var(--line);display:inline-grid;place-items:center;font-size:12px}
+.movie-poster-thumb.empty{color:var(--muted)}
+.status-badge,.type-badge{display:inline-block;border:1px solid #77818a;border-radius:999px;font-size:9px;font-weight:700;letter-spacing:.1em;padding:3px 8px;text-transform:uppercase;color:#d5dadd;white-space:nowrap}
+.status-badge.showing{border-color:var(--gold);color:var(--gold2)}
+.status-badge.soon{color:#d5b5df;border-color:#9a7fad}
+.status-badge.archived{opacity:.45;color:var(--muted)}
+.type-badge.vip{border-color:var(--gold);color:var(--gold2)}
+.movie-editor{display:grid;gap:14px;background:var(--panel);border:1px solid var(--line);padding:22px;margin-top:20px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.poster-label{color:var(--muted);font-size:11px;display:grid;gap:3px}
+.dropzone{position:relative;border:1px dashed var(--line);padding:22px;text-align:center;color:var(--muted);font-size:12px;cursor:pointer;background:var(--panel);transition:.2s}
+.dropzone:hover,.dropzone.dragging{border-color:var(--gold);color:var(--gold2)}
+.dropzone-input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.dropzone img{max-height:160px;margin-top:12px;display:block;margin-inline:auto;border:1px solid var(--line)}
+.field-error{color:#f0aa9c;font-size:11px;margin-top:4px}
+.editor-actions{display:flex;gap:12px;justify-content:flex-end;align-items:center;margin-top:8px}
+.button-archive{background:none;border:1px solid #8a5247;color:#c98d7f}
+.button-archive:hover{color:#f0aa9c;transform:none}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--gold);color:var(--gold2);padding:10px 16px;font-size:12px;z-index:20}
+
+/* Admin: auditorium status grid */
+.auditorium-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin:0 0 48px}
+.auditorium-card{background:var(--panel);border:1px solid var(--line);padding:18px;display:grid;gap:10px;align-content:start}
+.auditorium-card h3{font:500 20px "Fraunces",Georgia,serif;margin:0}
+.auditorium-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.auditorium-card-head h3{flex:1}
+.auditorium-seats{font-size:11px}
+.status-line{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted)}
+.status-line .field{flex:1}
+.status-line select{padding:7px}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
+.status-dot.Open{background:var(--gold);box-shadow:0 0 0 3px #d5a45f2b}
+.status-dot.Maintenance{background:#c98d3f;box-shadow:0 0 0 3px #c98d3f2b}
+.status-dot.Closed{background:#5b6670;box-shadow:0 0 0 3px #5b66702b}
+.status-save{margin-top:4px;justify-content:center}
+.manage-seats{color:var(--gold2);font-size:11px}
+.manage-seats:hover{color:var(--gold)}
+
+/* Admin: seat-map editor */
+.seat-toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:28px 0 18px}
+.seat-tool{border:1px solid var(--line);background:var(--panel);color:var(--muted);padding:10px 14px;font-size:11px;cursor:pointer;transition:.2s}
+.seat-tool:hover{color:var(--gold2)}
+.seat-tool.active{color:var(--gold2);border-color:var(--gold)}
+.seat-summary{display:flex;gap:18px;flex-wrap:wrap;color:var(--muted);font-size:11px;margin:16px 0}
+.seat-map.editor{margin:0 0 8px}
+.seat.outofservice{background:none;border:1px dashed var(--line);color:var(--muted);opacity:.6}
+.seat.recliner{border-color:var(--gold);color:var(--gold2)}
+.seat.reserved{cursor:not-allowed}
+.legend i.available{background:#5d6b75}
+.legend i.selected{background:none;border:1px dashed var(--gold)}
+.legend i.recliner{border:1px solid var(--gold);background:none}
+
+/* Hero gallery carousel (refined) */
+.hero-carousel{width:calc(100% + 16vw);margin:64px -8vw 0;padding-bottom:18px}
+.coverflow-viewport{overflow:hidden;padding:12px 0 22px;-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 18%,#000 82%,transparent 100%);mask-image:linear-gradient(90deg,transparent 0,#000 18%,#000 82%,transparent 100%)}
+.coverflow-track{position:relative;min-height:340px;touch-action:pan-y;-webkit-user-select:none;user-select:none}
+.coverflow-slide{position:absolute;left:50%;top:0;width:clamp(190px,24vw,230px);height:330px;background:var(--panel);border:1px solid #ffffff18;overflow:hidden;will-change:transform,opacity;transition:transform .55s cubic-bezier(.4,0,.2,1),opacity .55s cubic-bezier(.4,0,.2,1);cursor:pointer}
+.coverflow-slide img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
+.coverflow-viewport.is-dragging .coverflow-slide{transition:none}
+.slide-caption{position:absolute;left:0;right:0;bottom:0;padding:14px;background:#0f1620d9;pointer-events:none}
+.slide-caption strong{display:block;font:500 20px "Fraunces",Georgia,serif;margin-bottom:2px}
+.slide-caption span{color:var(--muted);font-size:10px}
+.slide-caption p{color:#c2ccd2;font-size:11px;line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin:8px 0 0}
+.hero-status{position:absolute;top:12px;left:12px;border:1px solid var(--gold);color:var(--gold2);background:#0b1018cc;border-radius:999px;padding:5px 9px;font-size:9px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;pointer-events:none}
+.hero-status.is-coming{color:#d5b5df;border-color:#9a7fad}
+.carousel-controls{display:flex;align-items:center;justify-content:center;gap:20px;padding-top:10px}
+.carousel-arrow{width:32px;height:32px;border:1px solid var(--line);border-radius:50%;background:var(--panel);color:var(--gold2);cursor:pointer;transition:.2s}
+.carousel-arrow:hover{color:var(--gold);border-color:var(--gold)}
+.carousel-dots{display:flex;gap:7px;align-items:center}
+.carousel-dot{width:6px;height:6px;border:0;border-radius:999px;padding:0;background:var(--muted);opacity:.55;cursor:pointer;transition:.2s}
+.carousel-dot.active{width:22px;background:var(--gold);opacity:1}
+@media(max-width:700px){.coverflow-slide{width:clamp(150px,60vw,210px);height:270px}.hero-carousel{width:calc(100% + 10vw);margin:36px -5vw 0}.coverflow-track{min-height:280px}.slide-caption p{display:none}.slide-caption{padding:10px}}
+@media(prefers-reduced-motion:reduce){.hero-carousel{margin-top:44px}.coverflow-viewport{-webkit-mask-image:none;mask-image:none}.coverflow-slide{transition:opacity .3s ease}}
