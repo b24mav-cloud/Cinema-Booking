@@ -32,7 +32,18 @@ export default wrap(async (req: NextApiRequest, res: NextApiResponse) => {
   }
   // Single generic error — never reveals whether the email exists or the
   // password was wrong.
-  if (result.error || !result.data.session) return json(res, 401, { error: "Incorrect email or password." });
+  if (result.error || !result.data.session) {
+    const reason = result.error;
+    const isInvalidCredentials = reason?.code === "invalid_credentials" || reason?.status === 400 || /invalid login credentials/i.test(reason?.message ?? "");
+    if (reason && !isInvalidCredentials) {
+      // Not a credentials problem — surface the provider's answer so a
+      // misconfigured SUPABASE_URL / SUPABASE_ANON_KEY is obvious instead of
+      // hiding behind the generic 401.
+      console.error("Supabase rejected sign-in:", { code: reason.code, status: reason.status, message: reason.message });
+      return json(res, 502, { error: `The sign-in was rejected by your authentication provider (${reason.status ?? "status unknown"} · ${reason.code ?? reason.message ?? "unknown reason"}). Check SUPABASE_URL and SUPABASE_ANON_KEY on the server.` });
+    }
+    return json(res, 401, { error: "Incorrect email or password." });
+  }
   const user = result.data.user;
   const role = roleOf(user);
   setSession(res, result.data.session, role);
