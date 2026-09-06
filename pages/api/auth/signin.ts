@@ -7,7 +7,7 @@ export default wrap(async (req: NextApiRequest, res: NextApiResponse) => {
   const input = await readBody<{ email?: string; password?: string }>(req);
   if (!input?.email?.trim() || !input?.password) return json(res, 400, "Email and password are required.");
   if (!isAuthConfigured()) {
-    return json(res, 503, "Supabase authentication is not configured. Set SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY before starting the server.");
+    return json(res, 503, "Supabase authentication is not configured. Set SUPABASE_URL and SUPABASE_ANON_KEY before starting the server.");
   }
   let result;
   try {

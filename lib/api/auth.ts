@@ -9,11 +9,22 @@ let supabase: SupabaseClient | null | undefined;
 
 export function getSupabase() {
   if (supabase !== undefined) return supabase;
-  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_PUBLISHABLE_KEY) return (supabase = null);
-  supabase = createSupabaseClient(process.env.SUPABASE_URL, process.env.SUPABASE_PUBLISHABLE_KEY, {
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) return (supabase = null);
+  supabase = createSupabaseClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY, {
     auth: { persistSession: false, autoRefreshToken: false }
   });
   return supabase;
+}
+
+let admin: SupabaseClient | null | undefined;
+
+export function getAdminClient() {
+  if (admin !== undefined) return admin;
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) return (admin = null);
+  admin = createSupabaseClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false }
+  });
+  return admin;
 }
 
 const cookieName = "cinema_session";

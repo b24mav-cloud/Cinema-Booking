@@ -19,7 +19,7 @@ npm run dev
 
 Then open `http://localhost:3000`.
 
-For authentication, copy `.env.example` to `.env` and fill in `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`.
+For authentication, copy `.env.example` to `.env` and fill in `SUPABASE_URL` and `SUPABASE_ANON_KEY`. `SUPABASE_SERVICE_ROLE_KEY` is optional and server-only — never expose it to the browser or commit it.
 
 ## Scripts
 
