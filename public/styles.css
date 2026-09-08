@@ -182,3 +182,19 @@ h1,h2,h3,.hero-carousel-copy h2,.coverflow-slide figcaption strong{font-family:"
 .carousel-dot.active{width:22px;background:var(--gold);opacity:1}
 @media(max-width:700px){.coverflow-slide{width:clamp(150px,60vw,210px);height:270px}.hero-carousel{width:calc(100% + 10vw);margin:36px -5vw 0}.coverflow-track{min-height:280px}.slide-caption p{display:none}.slide-caption{padding:10px}}
 @media(prefers-reduced-motion:reduce){.hero-carousel{margin-top:44px}.coverflow-viewport{-webkit-mask-image:none;mask-image:none}.coverflow-slide{transition:opacity .3s ease}}
+
+/* Admin: showtimes in movie editor */
+.showtime-editor{display:grid;gap:12px;border-top:1px solid var(--line);padding-top:16px;margin-top:2px}
+.showtime-title{font:500 18px "Fraunces",Georgia,serif;margin:5px 0 0}
+.showtime-note{color:var(--muted);font-size:11px;margin:0}
+.showtime-rows{display:grid;gap:10px}
+.showtime-row{display:grid;grid-template-columns:1.5fr 1fr 1fr auto;gap:10px;align-items:flex-end;background:var(--panel2);border:1px solid var(--line);padding:10px}
+.showtime-row .field input,.showtime-row .field select{padding:8px 10px}
+.showtime-row .field-error{grid-column:1/-1}
+.showtime-remove{width:28px;height:28px;display:grid;place-items:center;background:none;border:1px solid #8a5247;color:#c98d7f;font-size:11px;cursor:pointer}
+.showtime-remove:hover{color:#f0aa9c;border-color:var(--red)}
+.showtime-actions{display:flex}
+.showtime-actions .showtime-add{align-self:flex-start}
+.showtime-count{color:var(--muted);font-size:10px;display:inline-block;margin-left:6px}
+.showtime-count.zero{color:var(--red)}
+@media(max-width:700px){.showtime-row{grid-template-columns:1fr 1fr}.showtime-remove{grid-column:2;justify-self:flex-end;margin-top:20px}.showtime-row .field-error{grid-column:1/-1}}
