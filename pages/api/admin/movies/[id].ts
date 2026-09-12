@@ -6,7 +6,7 @@ import { json, readBody, wrap } from "../../../../lib/api/respond";
 import type { Movie } from "../../../../lib/types";
 
 type ShowtimeInput = { id?: number; auditoriumId?: number; startTime?: string };
-type MovieInput = { title?: string; genre?: string; durationMinutes?: number; status?: string; cast?: string; description?: string; posterUrl?: string; showtimes?: ShowtimeInput[] };
+type MovieInput = { title?: string; genre?: string; durationMinutes?: number; status?: string; cast?: string; description?: string; posterUrl?: string; trailerUrl?: string; showtimes?: ShowtimeInput[] };
 
 const trimShowtimes = (list: ShowtimeInput[] | undefined): { id?: number; auditoriumId?: number; startTime?: string }[] =>
   (list ?? [])
@@ -40,7 +40,8 @@ export default wrap(async (req: NextApiRequest, res: NextApiResponse) => {
     status: input.status ?? movie.status ?? "coming soon",
     cast: input.cast ?? movie.cast,
     description: input.description ?? movie.description,
-    posterUrl: input.posterUrl ?? movie.posterUrl
+    posterUrl: input.posterUrl ?? movie.posterUrl,
+    trailerUrl: input.trailerUrl ?? movie.trailerUrl
   };
   const result = validateMovieInput(merged);
   if (Object.keys(result.errors).length) return json(res, 400, { error: "Please fix the highlighted fields.", errors: result.errors });

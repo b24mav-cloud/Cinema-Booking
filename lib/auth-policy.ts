@@ -4,8 +4,7 @@ export const PASSWORD_RULES: PasswordRule[] = [
   { key: "length", label: "At least 8 characters", test: password => password.length >= 8 },
   { key: "upper", label: "One uppercase letter", test: password => /[A-Z]/.test(password) },
   { key: "lower", label: "One lowercase letter", test: password => /[a-z]/.test(password) },
-  { key: "number", label: "One number", test: password => /[0-9]/.test(password) },
-  { key: "symbol", label: "One special character", test: password => /[^A-Za-z0-9]/.test(password) }
+  { key: "number", label: "One number", test: password => /[0-9]/.test(password) }
 ];
 
 export const passwordErrors = (password: string): string[] =>

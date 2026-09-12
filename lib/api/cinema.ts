@@ -1,4 +1,5 @@
 import type { Auditorium, Movie, MovieWithShowtimes, Seat, Showtime, ShowtimeWithMovie, Store } from "../types";
+import { isWellFormedUrl } from "../trailers";
 
 export const showtimeToIso = (date: string, time: string): string | undefined => {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec((date ?? "").trim());
@@ -143,7 +144,7 @@ export function syncAuditoriumSeats(store: Store, auditorium: Auditorium): numbe
   return synced;
 }
 
-export function validateMovieInput(input: { title?: string; genre?: string; durationMinutes?: number; status?: string; cast?: string; description?: string; posterUrl?: string }) {
+export function validateMovieInput(input: { title?: string; genre?: string; durationMinutes?: number; status?: string; cast?: string; description?: string; posterUrl?: string; trailerUrl?: string }) {
   const errors: Record<string, string> = {};
   const statuses = ["now showing", "coming soon", "archived"];
   const title = input.title?.trim() ?? "";
@@ -159,8 +160,10 @@ export function validateMovieInput(input: { title?: string; genre?: string; dura
   const posterUrl = input.posterUrl?.trim() ?? "";
   if (posterUrl && !/^data:image\/[a-zA-Z0-9.+-]+;base64,/i.test(posterUrl) && !/^https?:\/\//i.test(posterUrl)) errors.poster = "Poster must be an image file or a URL.";
   if (posterUrl.length > 2_100_000) errors.poster = "Poster is too large — upload an image under 1.5MB.";
+  const trailerUrl = input.trailerUrl?.trim() ?? "";
+  if (trailerUrl && !isWellFormedUrl(trailerUrl)) errors.trailer = "Trailer link must be a valid URL (https://...).";
   if (Object.keys(errors).length) return { errors };
-  return { errors: {}, values: { title, genre, durationMinutes, status, cast, description, posterUrl } };
+  return { errors: {}, values: { title, genre, durationMinutes, status, cast, description, posterUrl, trailerUrl } };
 }
 
 export type NewShowtimeInput = {

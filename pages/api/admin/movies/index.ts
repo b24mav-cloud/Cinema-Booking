@@ -6,7 +6,7 @@ import { json, readBody, wrap } from "../../../../lib/api/respond";
 import type { Movie } from "../../../../lib/types";
 
 type ShowtimeInput = { id?: number; auditoriumId?: number; startTime?: string };
-type MovieInput = { title?: string; genre?: string; durationMinutes?: number; status?: string; cast?: string; description?: string; posterUrl?: string; showtimes?: ShowtimeInput[] };
+type MovieInput = { title?: string; genre?: string; durationMinutes?: number; status?: string; cast?: string; description?: string; posterUrl?: string; trailerUrl?: string; showtimes?: ShowtimeInput[] };
 
 const trimShowtimes = (list: ShowtimeInput[] | undefined): ShowtimeInput[] =>
   (list ?? [])
@@ -43,6 +43,7 @@ export default wrap(async (req: NextApiRequest, res: NextApiResponse) => {
       cast: values.cast,
       durationMinutes: values.durationMinutes,
       posterUrl: values.posterUrl,
+      trailerUrl: values.trailerUrl,
       status: values.status,
       releaseDate: null,
       tags: [values.genre],

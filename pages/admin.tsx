@@ -10,13 +10,13 @@ type AuditoriumStatus = "Open" | "Maintenance" | "Closed";
 type AuditoriumSummary = { id: number; name: string; type: "regular" | "vip"; status: AuditoriumStatus; seatCount: number };
 type Dashboard = { moviesCurrentlyShowing: number; upcomingMovies: number; archivedMovies: number; todaysBookings: number; auditoriumsOpen: number; auditoriumsTotal: number; auditoriums: AuditoriumSummary[] };
 type AdminMovie = Movie & { showtimeCount: number; showtimes: { id: number; startTime: string; endTime?: string; auditorium: string; auditoriumId?: number }[] };
-type EditorForm = { id: number | null; title: string; genre: string; runtime: string; status: string; cast: string; description: string; posterUrl: string; posterName: string; showtimes: ShowtimeDraft[]; errors: Record<string, string> };
+type EditorForm = { id: number | null; title: string; genre: string; runtime: string; status: string; cast: string; description: string; posterUrl: string; posterName: string; trailerUrl: string; showtimes: ShowtimeDraft[]; errors: Record<string, string> };
 
 const STATUS_LABELS: Record<string, string> = { "now showing": "Now showing", "coming soon": "Coming soon", archived: "Archived" };
 const STATUS_CODES: Record<string, string> = { "now showing": "showing", "coming soon": "soon", archived: "archived" };
 const AUDITORIUM_STATUS: AuditoriumStatus[] = ["Open", "Maintenance", "Closed"];
 
-const emptyForm: EditorForm = { id: null, title: "", genre: "", runtime: "", status: "coming soon", cast: "", description: "", posterUrl: "", posterName: "", showtimes: [], errors: {} };
+const emptyForm: EditorForm = { id: null, title: "", genre: "", runtime: "", status: "coming soon", cast: "", description: "", posterUrl: "", posterName: "", trailerUrl: "", showtimes: [], errors: {} };
 
 const utcParts = (iso: string) => {
   const date = new Date(iso);
@@ -71,7 +71,7 @@ export default function Admin() {
   const rest = (patch: Partial<EditorForm>): Record<string, string> => Object.fromEntries(Object.keys(patch).map(key => [key, ""]));
 
   const startNew = () => setForm({ ...emptyForm });
-  const startEdit = (movie: AdminMovie) => setForm({ id: movie.id, title: movie.title, genre: movie.genre ?? "", runtime: String(movie.durationMinutes), status: movie.status ?? "coming soon", cast: movie.cast ?? "", description: movie.description ?? "", posterUrl: movie.posterUrl, posterName: "", showtimes: (movie.showtimes ?? []).map(item => ({ key: `s-${item.id}`, id: item.id, auditoriumId: item.auditoriumId ?? undefined, date: utcParts(item.startTime).date, time: utcParts(item.startTime).time, errors: {} })), errors: {} });
+  const startEdit = (movie: AdminMovie) => setForm({ id: movie.id, title: movie.title, genre: movie.genre ?? "", runtime: String(movie.durationMinutes), status: movie.status ?? "coming soon", cast: movie.cast ?? "", description: movie.description ?? "", posterUrl: movie.posterUrl, posterName: "", trailerUrl: movie.trailerUrl ?? "", showtimes: (movie.showtimes ?? []).map(item => ({ key: `s-${item.id}`, id: item.id, auditoriumId: item.auditoriumId ?? undefined, date: utcParts(item.startTime).date, time: utcParts(item.startTime).time, errors: {} })), errors: {} });
 
   const addShowtime = () => setForm(current => current ? { ...current, showtimes: [...current.showtimes, { key: `n-${Date.now()}-${current.showtimes.length}`, auditoriumId: undefined, date: "", time: "", errors: {} }] } : current);
   const removeShowtime = (key: string) => setForm(current => current ? { ...current, showtimes: current.showtimes.filter(row => row.key !== key), errors: Object.fromEntries(Object.entries(current.errors).filter(([field]) => !/^showtime-\d+$/.test(field))) } : current);
@@ -117,7 +117,7 @@ export default function Admin() {
       return setForm({ ...form, errors: placed });
     }
     setBusy(true);
-    const body = { title: form.title, genre: form.genre, durationMinutes: Number(form.runtime), status: form.status, cast: form.cast, description: form.description, posterUrl: form.posterUrl, showtimes: submitted.map(row => ({ id: row.id, auditoriumId: row.auditoriumId, startTime: showtimeToIso(row.date, row.time) })) };
+    const body = { title: form.title, genre: form.genre, durationMinutes: Number(form.runtime), status: form.status, cast: form.cast, description: form.description, posterUrl: form.posterUrl, trailerUrl: form.trailerUrl, showtimes: submitted.map(row => ({ id: row.id, auditoriumId: row.auditoriumId, startTime: showtimeToIso(row.date, row.time) })) };
     try {
       const endpoint = form.id ? `/api/admin/movies/${form.id}` : "/api/admin/movies";
       const response = await fetch(endpoint, { method: form.id ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -188,6 +188,7 @@ export default function Admin() {
       <label className="field">Status<select value={form.status} onChange={e => setField({ status: e.target.value })}><option value="coming soon">Coming soon</option><option value="now showing">Now showing</option><option value="archived">Archived</option></select>{form.errors.status && <span className="field-error">{form.errors.status}</span>}</label></div>
       <div className="form-row"><label className="field">Cast<input value={form.cast} onChange={e => setField({ cast: e.target.value })} placeholder="e.g. Leonardo DiCaprio" /></label>
         <label className="field">Short description<textarea rows={3} value={form.description} onChange={e => setField({ description: e.target.value })} placeholder="A one-liner shown to your viewers." /></label></div>
+      <div className="field"><span className="poster-label">Trailer link{" "}<span className="muted">optional — YouTube or any video URL</span></span><input type="url" value={form.trailerUrl} onChange={e => setField({ trailerUrl: e.target.value })} placeholder="https://youtube.com/watch?v=..." />{form.errors.trailer && <span className="field-error">{form.errors.trailer}</span>}</div>
       <div className="showtime-editor"><div><p className="kicker">SHOWTIMES</p><h3 className="showtime-title">When can this movie be seen?</h3></div>
         {form.showtimes.length === 0 && <p className="showtime-note">Add a showtime to make this movie bookable.</p>}
         <div className="showtime-rows">{form.showtimes.map((row, index) => <div className="showtime-row" key={row.key}>
