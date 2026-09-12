@@ -172,17 +172,39 @@ h1,h2,h3{font-family:"Fraunces",Georgia,serif}
 .browse-tab-count{font-size:10px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:2px 7px}
 .browse-tab.active .browse-tab-count{color:var(--gold);border-color:var(--gold)}
 .browse-grid{animation:browse-fade .28s ease}
-.browse-empty{grid-column:1/-1;padding:48px 0;text-align:center;color:var(--muted);margin:0}
+.browse-empty{padding:48px 0;text-align:center;color:var(--muted);margin:0;flex:0 0 100%}
 @keyframes browse-fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 @media(prefers-reduced-motion:reduce){.browse-grid{animation:none}}
-.movie-card.not-bookable{cursor:default}
-.movie-card.not-bookable:hover{transform:none;border-color:var(--line)}
-.movie-showtimes{display:flex;flex-wrap:wrap;gap:6px;padding:0 18px 16px}
+.movie-strip-wrap{position:relative}
+.movie-strip{display:flex;gap:16px;overflow-x:auto;padding:4px 6px 14px;scroll-snap-type:x proximity;scrollbar-width:none}
+.movie-strip::-webkit-scrollbar{display:none}
+.movie-strip-arrow{position:absolute;top:calc(clamp(152px,14.2vw,192px)*.75);transform:translateY(-50%);z-index:3;width:36px;height:36px;border:1px solid var(--line);border-radius:50%;background:rgba(18,27,38,.86);color:var(--gold2);cursor:pointer;transition:.2s}
+.movie-strip-arrow.prev{left:-16px}
+.movie-strip-arrow.next{right:-16px}
+.movie-strip-arrow:hover{color:var(--gold);border-color:var(--gold)}
+.movie-strip-arrow:disabled{opacity:.35;pointer-events:none}
+@media(max-width:900px){.movie-strip-arrow.prev{left:4px}.movie-strip-arrow.next{right:4px}}
+@media(max-width:700px){.movie-strip-arrow{display:none}.movie-strip{gap:12px;padding-left:0;padding-right:0}}
 .movie-chip{border:1px solid var(--line);color:var(--muted);font-size:10px;letter-spacing:.04em;padding:4px 8px}
 .movie-chip.more{color:var(--gold2);border-color:var(--gold)}
+.movie-showtimes{display:flex;flex-wrap:wrap;gap:6px}
 .movie-releases{position:absolute;left:14px;bottom:14px;background:#0b101dcc;border:1px solid #9a7fad;color:#d5b5df;padding:5px 9px;font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;z-index:1}
 .trailer-button{position:absolute;right:14px;bottom:14px;border:1px solid var(--gold);background:#0b101ddb;color:var(--gold2);padding:7px 10px;font-size:10px;font-weight:700;letter-spacing:.06em;cursor:pointer;z-index:2;transition:.2s}
 .trailer-button:hover{background:var(--gold);color:#0d1319}
+.movie-strip .movie-card{flex:0 0 clamp(152px,14.2vw,192px);scroll-snap-align:start}
+.movie-strip .movie-poster{aspect-ratio:2/3;height:auto;background-size:cover;background-position:center}
+.movie-strip .movie-poster:after{background:none}
+.movie-strip .not-bookable{cursor:default}
+.movie-strip .not-bookable:hover{transform:none;border-color:var(--line)}
+.movie-strip .movie-info{position:static;margin:0;padding:12px 10px 4px;display:grid;gap:4px;align-items:start}
+.movie-strip .movie-info h3{font:500 16px "Playfair Display",serif;margin:0 0 1px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.32}
+.movie-strip .movie-info p{margin:0}
+.movie-strip .movie-price{margin-top:2px}
+.movie-strip .movie-showtimes{display:flex;flex-wrap:wrap;gap:5px;padding:6px 10px 10px}
+.movie-strip .movie-chip{font-size:9px;padding:3px 6px}
+.movie-strip .experience{left:10px;top:10px;padding:5px 7px;font-size:8px}
+.movie-strip .trailer-button{right:10px;bottom:10px;padding:6px 8px;font-size:9px}
+.movie-strip .movie-releases{left:10px;bottom:10px;padding:4px 7px;font-size:8px}
 
 /* Trailer modal */
 .trailer-scrim{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:100;display:grid;place-items:center;padding:24px;animation:browse-fade .2s ease}
