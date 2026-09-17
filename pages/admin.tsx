@@ -4,13 +4,14 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { SiteHeader } from "../components/SiteHeader";
 import { showtimeToIso } from "../lib/api/cinema";
-import type { Movie, ShowtimeDraft } from "../lib/types";
+import { peso, type Movie, type Seat, type ShowtimeDraft } from "../lib/types";
 
 type AuditoriumStatus = "Open" | "Maintenance" | "Closed";
 type AuditoriumSummary = { id: number; name: string; type: "regular" | "vip"; status: AuditoriumStatus; seatCount: number };
-type Dashboard = { moviesCurrentlyShowing: number; upcomingMovies: number; archivedMovies: number; todaysBookings: number; auditoriumsOpen: number; auditoriumsTotal: number; auditoriums: AuditoriumSummary[] };
-type AdminMovie = Movie & { showtimeCount: number; showtimes: { id: number; startTime: string; endTime?: string; auditorium: string; auditoriumId?: number }[] };
+type Dashboard = { moviesCurrentlyShowing: number; upcomingMovies: number; archivedMovies: number; todaysBookings: number; auditoriumsOpen: number; auditoriumsTotal: number; auditoriums: AuditoriumSummary[]; ticketsSoldToday?: number; revenueToday?: number; avgOccupancyRate?: number };
+type AdminMovie = Movie & { showtimeCount: number; showtimes: { id: number; startTime: string; endTime?: string; auditorium: string; auditoriumId?: number; price?: number }[] };
 type EditorForm = { id: number | null; title: string; genre: string; runtime: string; status: string; cast: string; description: string; posterUrl: string; posterName: string; trailerUrl: string; showtimes: ShowtimeDraft[]; errors: Record<string, string> };
+type OccupancyDetail = { id: number; startTime: string; endTime?: string; auditorium: string; auditoriumType?: string; experience?: string; price?: number; movieTitle: string; moviePosterUrl: string; seats: Seat[] };
 
 const STATUS_LABELS: Record<string, string> = { "now showing": "Now showing", "coming soon": "Coming soon", archived: "Archived" };
 const STATUS_CODES: Record<string, string> = { "now showing": "showing", "coming soon": "soon", archived: "archived" };
@@ -36,6 +37,8 @@ export default function Admin() {
   const [toast, setToast] = useState("");
   const [busy, setBusy] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [occupancy, setOccupancy] = useState<number | null>(null);
+  const [occupancyData, setOccupancyData] = useState<OccupancyDetail | null>(null);
 
   const notify = (message: string) => {
     setToast(message);
@@ -57,13 +60,35 @@ export default function Admin() {
     return "Good evening";
   }, []);
 
-  const cards = stats && [
-    ["Now showing", stats.moviesCurrentlyShowing],
-    ["Upcoming", stats.upcomingMovies],
-    ["Archived", stats.archivedMovies],
-    ["Today's bookings", stats.todaysBookings],
-    ["Auditoriums open", `${stats.auditoriumsOpen}/${stats.auditoriumsTotal}`]
+  const todayCards = stats && [
+    ["Tickets sold today", String(stats.ticketsSoldToday ?? 0)],
+    ["Revenue today", peso(stats.revenueToday ?? 0)],
+    ["Avg occupancy", `${stats.avgOccupancyRate ?? 0}%`]
   ];
+
+  const cinemaLine = stats && [
+    `${stats.moviesCurrentlyShowing} showing`,
+    `${stats.upcomingMovies} coming soon`,
+    `${stats.archivedMovies} archived`,
+    `${stats.todaysBookings} bookings today`,
+    `${stats.auditoriumsOpen}/${stats.auditoriumsTotal} halls open`
+  ];
+
+  const upcomingShowtimes = useMemo(
+    () => movies
+      .filter(movie => movie.status !== "archived")
+      .flatMap(movie => (movie.showtimes ?? []).map(item => ({
+        id: item.id,
+        startTime: item.startTime,
+        auditorium: item.auditorium,
+        auditoriumId: item.auditoriumId,
+        price: item.price,
+        movieTitle: movie.title
+      })))
+      .filter(item => new Date(item.startTime).getTime() > Date.now())
+      .sort((a, b) => a.startTime.localeCompare(b.startTime)),
+    [movies]
+  );
 
   const signOut = async () => { await fetch("/api/auth/signout", { method: "POST" }); router.push("/"); };
 
@@ -71,9 +96,9 @@ export default function Admin() {
   const rest = (patch: Partial<EditorForm>): Record<string, string> => Object.fromEntries(Object.keys(patch).map(key => [key, ""]));
 
   const startNew = () => setForm({ ...emptyForm });
-  const startEdit = (movie: AdminMovie) => setForm({ id: movie.id, title: movie.title, genre: movie.genre ?? "", runtime: String(movie.durationMinutes), status: movie.status ?? "coming soon", cast: movie.cast ?? "", description: movie.description ?? "", posterUrl: movie.posterUrl, posterName: "", trailerUrl: movie.trailerUrl ?? "", showtimes: (movie.showtimes ?? []).map(item => ({ key: `s-${item.id}`, id: item.id, auditoriumId: item.auditoriumId ?? undefined, date: utcParts(item.startTime).date, time: utcParts(item.startTime).time, errors: {} })), errors: {} });
+  const startEdit = (movie: AdminMovie) => setForm({ id: movie.id, title: movie.title, genre: movie.genre ?? "", runtime: String(movie.durationMinutes), status: movie.status ?? "coming soon", cast: movie.cast ?? "", description: movie.description ?? "", posterUrl: movie.posterUrl, posterName: "", trailerUrl: movie.trailerUrl ?? "", showtimes: (movie.showtimes ?? []).map(item => ({ key: `s-${item.id}`, id: item.id, auditoriumId: item.auditoriumId ?? undefined, date: utcParts(item.startTime).date, time: utcParts(item.startTime).time, price: item.price ? String(item.price) : "", errors: {} })), errors: {} });
 
-  const addShowtime = () => setForm(current => current ? { ...current, showtimes: [...current.showtimes, { key: `n-${Date.now()}-${current.showtimes.length}`, auditoriumId: undefined, date: "", time: "", errors: {} }] } : current);
+  const addShowtime = () => setForm(current => current ? { ...current, showtimes: [...current.showtimes, { key: `n-${Date.now()}-${current.showtimes.length}`, auditoriumId: undefined, date: "", time: "", price: "", errors: {} }] } : current);
   const removeShowtime = (key: string) => setForm(current => current ? { ...current, showtimes: current.showtimes.filter(row => row.key !== key), errors: Object.fromEntries(Object.entries(current.errors).filter(([field]) => !/^showtime-\d+$/.test(field))) } : current);
   const updateShowtime = (key: string, patch: Partial<ShowtimeDraft>) => setForm(current => {
     if (!current) return current;
@@ -99,17 +124,27 @@ export default function Admin() {
     setForm({ ...form, errors });
   };
 
+  const openOccupancy = async (id: number) => {
+    if (occupancy === id) return setOccupancy(null);
+    setOccupancy(id);
+    setOccupancyData(null);
+    const response = await fetch(`/api/admin/showtimes/${id}`);
+    if (response.ok) setOccupancyData(await response.json());
+  };
+
   const saveMovie = async (event: FormEvent) => {
     event.preventDefault();
     if (!form || busy) return;
-    const submitted = form.showtimes.map((row, fullIndex) => ({ fullIndex, id: row.id, auditoriumId: row.auditoriumId, date: row.date, time: row.time }))
+    const submitted = form.showtimes.map((row, fullIndex) => ({ fullIndex, id: row.id, auditoriumId: row.auditoriumId, date: row.date, time: row.time, price: row.price }))
       .filter(row => row.auditoriumId !== undefined || row.date || row.time);
     const clientErrors: Record<string, string> = {};
     submitted.forEach((row, index) => {
       const hasHall = row.auditoriumId !== undefined;
       const hasStart = !!row.date && !!row.time;
-      if (hasHall && !hasStart) clientErrors[`showtime-${index}`] = "Pick a date and start time for this showtime.";
-      else if (!hasHall && (row.date || row.time)) clientErrors[`showtime-${index}`] = "Choose an auditorium for this showtime.";
+      const priceValue = row.price?.trim();
+      if (priceValue && Number.isNaN(Number(priceValue))) clientErrors[`showtime-${index}`] = "Ticket price must be a number.";
+      if (hasHall && !hasStart) clientErrors[`showtime-${index}`] = clientErrors[`showtime-${index}`] ?? "Pick a date and start time for this showtime.";
+      else if (!hasHall && (row.date || row.time)) clientErrors[`showtime-${index}`] = clientErrors[`showtime-${index}`] ?? "Choose an auditorium for this showtime.";
     });
     if (Object.keys(clientErrors).length) {
       const placed: Record<string, string> = {};
@@ -117,7 +152,7 @@ export default function Admin() {
       return setForm({ ...form, errors: placed });
     }
     setBusy(true);
-    const body = { title: form.title, genre: form.genre, durationMinutes: Number(form.runtime), status: form.status, cast: form.cast, description: form.description, posterUrl: form.posterUrl, trailerUrl: form.trailerUrl, showtimes: submitted.map(row => ({ id: row.id, auditoriumId: row.auditoriumId, startTime: showtimeToIso(row.date, row.time) })) };
+    const body = { title: form.title, genre: form.genre, durationMinutes: Number(form.runtime), status: form.status, cast: form.cast, description: form.description, posterUrl: form.posterUrl, trailerUrl: form.trailerUrl, showtimes: submitted.map(row => ({ id: row.id, auditoriumId: row.auditoriumId, startTime: showtimeToIso(row.date, row.time), price: row.price?.trim() ? Number(row.price) : undefined })) };
     try {
       const endpoint = form.id ? `/api/admin/movies/${form.id}` : "/api/admin/movies";
       const response = await fetch(endpoint, { method: form.id ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -176,8 +211,40 @@ export default function Admin() {
     </section>
   );
 
+  const occupancySection = upcomingShowtimes.length > 0 && (
+    <section className="occupancy-view summary-card">
+      <div className="section-heading"><div><p className="kicker">LIVE OCCUPANCY</p><h2>Seats on screen</h2><p className="section-intro">Click a showtime to see which seats are taken right now.</p></div></div>
+      <div className="occupancy-list">
+        {upcomingShowtimes.slice(0, 24).map(item => {
+          const open = occupancy === item.id;
+          const bookedSeats = occupancyData?.seats.filter(seat => seat.status === "Reserved").length ?? 0;
+          const totalSeats = occupancyData?.seats.length ?? 0;
+          return <div className="occupancy-item" key={item.id}>
+            <button type="button" className={`occupancy-toggle${open ? " open" : ""}`} onClick={() => openOccupancy(item.id)}>
+              <span className="occupancy-time">{new Date(item.startTime).toLocaleString([], { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</span>
+              <strong>{item.movieTitle}</strong>
+              <span className="muted">{item.auditorium}{item.price ? ` · from ${peso(item.price)}` : ""}</span>
+              <em>{open ? "Hide seats" : "View occupancy"}</em>
+            </button>
+            {open && <div className="occupancy-panel">
+              {!occupancyData
+                ? <p className="showtime-note">Loading seats…</p>
+                : <div className="occupancy-body">
+                    <div className="occupancy-legend"><span><i className="legend-avail" />Available</span><span><i className="legend-taken" />Taken</span><span><i className="legend-off" />Not for sale</span></div>
+                    <div className={`seat-map occ-mini ${occupancyData.auditoriumType === "vip" ? "vip" : "regular"}`}>{Array.from(new Set(occupancyData.seats.map(s => s.row))).map(row => <div className="seat-row" key={row}><span className="row-label">{row}</span>{occupancyData.seats.filter(s => s.row === row).map(seat => <span className={`seat occ ${seat.status.toLowerCase()}`} key={seat.id}>{seat.number}</span>)}</div>)}</div>
+                    <p className="occupancy-total muted">{totalSeats - bookedSeats} of {totalSeats} seats available</p>
+                  </div>}
+            </div>}
+          </div>;
+        })}
+      </div>
+    </section>
+  );
+
   return <><Head><title>Admin dashboard | CinemaBooking</title></Head><SiteHeader admin /><main className="admin-page shell"><div className="d-flex justify-content-between"><div><p className="kicker">ADMIN PORTAL</p><h1>{greeting}.</h1></div><button className="button" onClick={signOut}>Sign out</button></div><p className="muted">A quick view of the cinema today.</p>
-    <section className="admin-stats">{cards?.map(([label, value]) => <article className="summary-card" key={String(label)}><span className="muted">{label}</span><strong>{value}</strong></article>)}</section>
+    <section className="admin-stats today-stats">{todayCards?.map(([label, value]) => <article className="summary-card" key={String(label)}><span className="muted">{label}</span><strong>{value}</strong></article>)}</section>
+    <p className="cinema-line muted">{cinemaLine?.join(" · ")}</p>
+    {occupancySection}
     {auditoriumGrid}
     <section className="summary-card admin-placeholder"><div className="section-heading"><div><p className="kicker">MOVIES</p><h2>Movie records</h2></div><div className="admin-actions"><select value={filter} onChange={e => setFilter(e.target.value)}><option value="">All statuses</option><option value="now showing">Now showing</option><option value="coming soon">Coming soon</option><option value="archived">Archived</option></select><button className="button gold-button" onClick={startNew}>+ Add movie</button></div></div>
     <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Poster</th><th>Title</th><th>Status</th><th>Runtime</th><th /></tr></thead><tbody>{movies.filter(item => !filter || item.status === filter).map(item => <tr key={item.id}><td>{item.posterUrl ? <img className="movie-poster-thumb" src={item.posterUrl} alt="" /> : <span className="movie-poster-thumb empty">—</span>}</td><td>{item.title}</td><td><span className={`status-badge ${STATUS_CODES[item.status ?? ""] ?? "soon"}`}>{STATUS_LABELS[item.status ?? "coming soon"] ?? item.status}</span> <span className={`showtime-count${item.showtimeCount === 0 ? " zero" : ""}`}>{item.showtimeCount} showtime{item.showtimeCount === 1 ? "" : "s"}</span></td><td>{item.durationMinutes} min</td><td><div className="admin-actions">{item.status !== "archived" && <button className="button back-button" onClick={() => archive(item.id)}>Archive</button>}<button className="button gold-button" onClick={() => startEdit(item)}>Edit</button></div></td></tr>)}</tbody></table></div>
@@ -195,6 +262,7 @@ export default function Admin() {
           <label className="field">Auditorium<select value={row.auditoriumId ?? ""} onChange={e => updateShowtime(row.key, { auditoriumId: e.target.value ? Number(e.target.value) : undefined })}><option value="">Choose auditorium</option>{(stats?.auditoriums ?? []).map(auditorium => <option value={auditorium.id} key={auditorium.id} disabled={auditorium.status !== "Open"}>{auditorium.name}{auditorium.type === "vip" ? " · VIP" : ""}{auditorium.status !== "Open" ? ` (${auditorium.status === "Maintenance" ? "under maintenance" : "closed"})` : ""}</option>)}</select>{form.errors[`showtime-${index}`] && <span className="field-error">{form.errors[`showtime-${index}`]}</span>}</label>
           <label className="field">Date<input type="date" value={row.date} onChange={e => updateShowtime(row.key, { date: e.target.value })} /></label>
           <label className="field">Start time<input type="time" value={row.time} onChange={e => updateShowtime(row.key, { time: e.target.value })} /></label>
+          <label className="field">Ticket price (₱)<input type="number" min={1} value={row.price ?? ""} placeholder="auto" onChange={e => updateShowtime(row.key, { price: e.target.value })} /></label>
           <button type="button" className="showtime-remove" onClick={() => removeShowtime(row.key)} aria-label={`Remove showtime ${index + 1}`}>✕</button>
         </div>)}</div>
         <div className="showtime-actions"><button type="button" className="button back-button showtime-add" onClick={addShowtime}>+ Add showtime</button></div>

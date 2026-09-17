@@ -218,3 +218,116 @@ h1,h2,h3{font-family:"Fraunces",Georgia,serif}
 .trailer-frame{position:relative;aspect-ratio:16/9;background:#000}
 .trailer-frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}
 @media(prefers-reduced-motion:reduce){.trailer-scrim{animation:none}}
+
+/* Watchlist hearts on movie posters */
+.heart-button{position:absolute;right:10px;top:10px;width:30px;height:30px;border:1px solid var(--line);border-radius:50%;background:#0b101dcc;color:#5d6b75;font-size:15px;line-height:1;display:grid;place-items:center;cursor:pointer;z-index:2;transition:.2s}
+.heart-button:hover{color:var(--gold2);border-color:var(--gold)}
+.heart-button.on{color:var(--red);border-color:var(--red)}
+.movie-strip .heart-button{right:10px;top:10px;width:26px;height:26px;font-size:13px}
+
+/* Customer dashboard tabs */
+.dashboard-tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:34px 0 42px;overflow-x:auto}
+.dashboard-tab{background:none;border:0;border-bottom:2px solid transparent;color:var(--muted);font-size:13px;font-weight:700;padding:12px 18px 14px;margin:0;cursor:pointer;white-space:nowrap;transition:.2s}
+.dashboard-tab:hover{color:var(--gold2)}
+.dashboard-tab.active{color:var(--gold2);border-bottom-color:var(--gold)}
+.account-section{min-height:200px}
+.empty-state{padding:42px;border:1px dashed var(--line);background:var(--panel);text-align:center;justify-items:center}
+.empty-state h2{font:500 26px "Fraunces",Georgia,serif;margin:0}
+
+/* Ticket cards (upcoming) */
+.ticket-list{display:grid;gap:18px}
+.ticket-card{display:grid;grid-template-columns:120px 1fr auto;gap:20px;background:var(--panel);border:1px solid var(--line);padding:18px;align-items:center}
+.ticket-card h3{font:500 24px "Fraunces",Georgia,serif;margin:8px 0 14px}
+.ticket-poster{width:120px;height:170px;background-size:cover;background-position:center;border:1px solid var(--line);align-self:stretch}
+.ticket-poster.empty{background:var(--panel2)}
+.ticket-body{min-width:0}
+.ticket-meta{display:flex;gap:12px;align-items:center;margin-bottom:6px}
+.ticket-details{display:grid;grid-template-columns:repeat(4,minmax(90px,1fr));gap:14px}
+.ticket-details span{display:grid;gap:3px;font-size:12px;color:var(--muted)}
+.ticket-details b{color:var(--ink);font-size:10px;letter-spacing:.08em;text-transform:uppercase}
+.ticket-side{display:grid;gap:14px;justify-items:end}
+.ticket-total{display:grid;gap:2px;justify-items:end}
+.ticket-total strong{color:var(--gold2);font-size:22px}
+
+/* Ticket / QR dialog */
+.ticket-dialog{position:relative;width:min(560px,96vw);background:var(--panel);border:1px solid var(--line);padding:30px;box-shadow:0 24px 60px #0009}
+.ticket-dialog>h3{font:500 32px "Fraunces",Georgia,serif;margin:10px 0 22px}
+.ticket-close{position:absolute;top:16px;right:16px}
+.ticket-dialog-body{display:grid;grid-template-columns:180px 1fr;gap:24px;align-items:center}
+.ticket-qr{width:180px;height:180px;background:#fff;border:1px solid var(--line)}
+.ticket-dialog-details{display:grid;gap:10px}
+.ticket-dialog-details span{display:flex;justify-content:space-between;gap:14px;border-bottom:1px solid var(--line);padding-bottom:8px;color:var(--muted);font-size:12px}
+.ticket-dialog-details b{color:var(--ink);text-transform:uppercase;letter-spacing:.08em;font-size:10px}
+.ticket-note{margin:22px 0 0;text-align:center}
+@media(max-width:700px){
+  .ticket-card{grid-template-columns:1fr;justify-items:start}
+  .ticket-poster{width:100%;height:120px}
+  .ticket-details{grid-template-columns:repeat(2,1fr)}
+  .ticket-side{justify-items:start}
+  .ticket-dialog-body{grid-template-columns:1fr}
+  .ticket-qr{margin-inline:auto}
+}
+
+/* Booking history */
+.history-item{align-items:flex-start}
+.rate-line{display:flex;gap:12px;align-items:center;margin-top:14px;flex-wrap:wrap}
+.star-row{display:flex;gap:4px}
+.star{background:none;border:0;padding:0;font-size:20px;cursor:pointer;color:var(--line);transition:.15s}
+.star:hover{color:var(--gold2)}
+.star.on{color:var(--gold)}
+.history-actions{display:grid;gap:14px;justify-items:end}
+.history-actions strong{color:var(--gold2);font-size:20px;display:block}
+@media(max-width:700px){.history-actions{justify-items:start}}
+
+/* Watchlist grid */
+.watch-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:16px}
+.watch-card{background:var(--panel);border:1px solid var(--line);overflow:hidden}
+.watch-poster{aspect-ratio:2/3;background-size:cover;background-position:center;position:relative}
+.watch-poster .heart-button.on{position:absolute;right:10px;top:10px}
+.watch-info{display:grid;gap:8px;padding:12px}
+.watch-info h3{font:500 16px "Fraunces",Georgia,serif;margin:0;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.watch-book{justify-content:center;padding:9px 10px;font-size:11px}
+.movie-strip .watch-poster .heart-button{position:absolute}
+
+/* Profile */
+.profile-form{display:grid;gap:16px;padding:26px;max-width:560px;border:1px solid var(--line);background:var(--panel)}
+.field-hint{color:var(--muted);opacity:.7;font-weight:400}
+.payment-prefs{display:flex;gap:10px;flex-wrap:wrap}
+.payment-pref{border:1px solid var(--line);background:var(--panel2);color:var(--muted);padding:12px 16px;display:inline-flex;gap:9px;align-items:center;cursor:pointer;font-size:12px;transition:.2s}
+.payment-pref:hover{color:var(--gold2)}
+.payment-pref.on{border-color:var(--gold);color:var(--gold2)}
+.profile-form .editor-actions{justify-content:space-between;flex-wrap:wrap}
+
+/* Admin today's overview */
+.today-stats{grid-template-columns:repeat(3,1fr)}
+.today-stats .summary-card strong{font-size:34px}
+.cinema-line{font-size:12px;margin:-32px 0 48px}
+@media(max-width:700px){.today-stats{grid-template-columns:1fr}}
+
+/* Admin live occupancy */
+.occupancy-view{padding:26px;border:1px solid var(--line);background:var(--panel);margin-bottom:48px}
+.occupancy-list{display:grid;gap:8px}
+.occupancy-item{border-bottom:1px solid var(--line);padding:4px 0}
+.occupancy-toggle{width:100%;display:grid;grid-template-columns:auto 1fr auto auto;gap:16px;align-items:center;background:none;border:0;color:var(--ink);padding:12px 6px;cursor:pointer;text-align:left;font-size:13px;transition:.2s}
+.occupancy-toggle:hover{background:var(--panel2)}
+.occupancy-toggle.open{background:var(--panel2)}
+.occupancy-time{color:var(--gold2);font-size:12px;font-weight:700;white-space:nowrap}
+.occupancy-toggle strong{font-size:15px}
+.occupancy-toggle em{font-style:normal;color:var(--muted);font-size:11px}
+.occupancy-panel{padding:14px 10px 20px}
+.occupancy-legend{display:flex;gap:18px;flex-wrap:wrap;color:var(--muted);font-size:11px;margin-bottom:18px}
+.occupancy-legend i{width:12px;height:12px;display:inline-block;background:var(--panel2);border:1px solid var(--line);margin-right:6px;vertical-align:-2px}
+.occupancy-legend .legend-avail{background:#2f6b4f;border-color:#2f6b4f}
+.occupancy-legend .legend-taken{background:var(--red);border-color:var(--red)}
+.occupancy-legend .legend-off{background:none;border:1px dashed var(--line)}
+.occupancy-body .seat-map{padding-inline:0;display:grid;gap:10px}
+.seat-map.occ-mini .seat{height:26px;width:100%;border-radius:4px;cursor:default;display:grid;place-items:center}
+.seat.occ.available{background:#2f6b4f;color:#e9f5ee}
+.seat.occ.reserved{background:var(--red);color:#fff}
+.seat.occ.outofservice{background:none;border:1px dashed var(--line);color:var(--muted);opacity:.6}
+.occupancy-total{margin:18px 0 0;font-size:12px}
+@media(max-width:700px){.occupancy-toggle{grid-template-columns:1fr auto;row-gap:6px}.occupancy-toggle em{grid-column:1/-1}}
+
+/* Showtime editor price column */
+.showtime-row{grid-template-columns:1.5fr 1fr 1fr 1fr auto}
+@media(max-width:900px){.showtime-row{grid-template-columns:1fr 1fr}.showtime-remove{grid-column:2;justify-self:flex-end}}

@@ -3,9 +3,9 @@ export type Seat = { id: number; row: string; number: number; price: number; sta
 export type AuditoriumStatus = "Open" | "Maintenance" | "Closed";
 export type Auditorium = { id: number; name: string; type: "regular" | "vip"; status: AuditoriumStatus; seats: Seat[] };
 export type Movie = { id: number; title: string; synopsis?: string; description?: string; durationMinutes: number; posterUrl: string; rating?: string; experience?: string; tags?: string[]; basePrice?: number; status?: string; genre?: string; cast?: string; releaseDate?: string | null; trailerUrl?: string; archivedAt?: string };
-export type MovieWithShowtimes = Movie & { showtimes: Showtime[] };
+export type MovieWithShowtimes = Movie & { showtimes: Showtime[]; avgRating?: number | null; ratingCount?: number };
 export type Showtime = { id: number; movieId: number; startTime: string; endTime?: string; auditorium: string; auditoriumId?: number; auditoriumType?: "regular" | "vip"; experience?: string; price?: number; seats: Seat[] };
-export type ShowtimeDraft = { key: string; id?: number; auditoriumId?: number; date: string; time: string; errors?: Record<string, string> };
+export type ShowtimeDraft = { key: string; id?: number; auditoriumId?: number; date: string; time: string; price?: string; errors?: Record<string, string> };
 export type ShowtimeWithMovie = Showtime & { movie: Movie | null };
 export type AddOn = { id: string; name: string; description: string; price: number; icon: string };
 export type AddOnSelection = { id: string; name: string; price: number };
@@ -31,8 +31,13 @@ export type Store = {
   movies: Movie[];
   showtimes: Showtime[];
   bookings: Booking[];
+  profiles?: Record<string, CustomerProfile>;
+  watchlists?: Record<string, number[]>;
+  ratings?: Rating[];
 };
 export type AuthUser = { id: string; email: string; role: "admin" | "customer"; metadata?: Record<string, unknown> };
+export type CustomerProfile = { name?: string; mobile?: string; paymentPrefs?: string[] };
+export type Rating = { id: string; bookingId: string; movieId: number; userId: string; stars: number; updatedAt: string };
 export type Dashboard = {
   moviesCurrentlyShowing: number;
   upcomingMovies: number;
@@ -41,6 +46,9 @@ export type Dashboard = {
   auditoriumsOpen: number;
   auditoriumsTotal: number;
   auditoriums: { id: number; name: string; type: "regular" | "vip"; status: AuditoriumStatus; seatCount: number }[];
+  ticketsSoldToday?: number;
+  revenueToday?: number;
+  avgOccupancyRate?: number;
 };
 export const addOns: AddOn[] = [
   { id: "popcorn", name: "Classic popcorn", description: "Freshly popped, salted just right", price: 180, icon: "🍿" },

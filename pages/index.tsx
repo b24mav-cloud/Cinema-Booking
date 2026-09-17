@@ -1,17 +1,19 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import Head from "next/head";
+import { useRouter } from "next/router";
 import { SiteHeader } from "../components/SiteHeader";
 import { HeroBanner, BannerTab } from "../components/HeroBanner";
 import { MovieBrowser } from "../components/MovieBrowser";
 import { addOns, Movie, MovieWithShowtimes, peso, Showtime } from "../lib/types";
 
 export default function Home() {
+  const router = useRouter();
   const [movies, setMovies] = useState<MovieWithShowtimes[]>([]); const [showtimes, setShowtimes] = useState<Showtime[]>([]);
   const [movie, setMovie] = useState<Movie>(); const [showtime, setShowtime] = useState<Showtime>();
   const [seats, setSeats] = useState<number[]>([]); const [extras, setExtras] = useState<string[]>([]); const [step, setStep] = useState(1);
   const [email, setEmail] = useState(""); const [payment, setPayment] = useState("GCash"); const [confirmation, setConfirmation] = useState<string>(); const [error, setError] = useState("");
   const [browseTab, setBrowseTab] = useState<BannerTab>("showing");
-  useEffect(() => { Promise.all([fetch("/api/movies").then(r => r.json()), fetch("/api/showtimes").then(r => r.json())]).then(([m, s]) => { setMovies(m); setShowtimes(s); }).catch(() => setError("We couldn't load films. Please refresh and try again.")); }, []);
+  useEffect(() => { Promise.all([fetch("/api/movies").then(r => r.json()), fetch("/api/showtimes").then(r => r.json())]).then(([m, s]) => { setMovies(m); setShowtimes(s); const requested = Number(router.query.movie); if (requested) { const found = (m as MovieWithShowtimes[]).find(item => item.id === requested && item.status !== "archived"); if (found) { setMovie(found); setStep(2); setBrowseTab("showing"); document.getElementById("booking")?.scrollIntoView({ behavior: "smooth", block: "start" }); } } }).catch(() => setError("We couldn't load films. Please refresh and try again.")); }, [router.query.movie]);
   const movieShows = showtimes.filter(s => s.movieId === movie?.id);
   const selectedSeats = showtime?.seats.filter(s => seats.includes(s.id)) ?? [];
   const total = selectedSeats.reduce((sum, s) => sum + s.price, 0) + extras.reduce((sum, id) => sum + (addOns.find(a => a.id === id)?.price ?? 0), 0);

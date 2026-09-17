@@ -42,7 +42,7 @@ const seed = (): Store => {
     { id: 2, movieId: 2, experience: "Director's Cut", price: 450, startTime: new Date(tomorrow.getTime() + (20 * 60 + 30) * 60000).toISOString(), endTime: showtimeEnd(new Date(tomorrow.getTime() + (20 * 60 + 30) * 60000).toISOString(), movies[1].durationMinutes), auditorium: byId(2).name, auditoriumId: 2, auditoriumType: "regular", seats: seatFromTemplate(byId(2), 2, 450) },
     { id: 3, movieId: 1, experience: "Premium", price: 780, startTime: new Date(tomorrow.getTime() + 21 * 3600000).toISOString(), endTime: showtimeEnd(new Date(tomorrow.getTime() + 21 * 3600000).toISOString(), movies[0].durationMinutes), auditorium: byId(7).name, auditoriumId: 7, auditoriumType: "vip", seats: seatFromTemplate(byId(7), 3, 780) }
   ];
-  return { branches: ["CinemaBooking"], auditoriums, movies, showtimes, bookings: [] };
+  return { branches: ["CinemaBooking"], auditoriums, movies, showtimes, bookings: [], profiles: {}, watchlists: {}, ratings: [] };
 };
 
 const localFile = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "data", "cinema.json");
@@ -81,6 +81,14 @@ function normalizeAuditoriums(list: unknown): { auditoriums: Auditorium[]; chang
   return { auditoriums: result, changed };
 }
 
+function ensureCollections(store: Store): boolean {
+  let changed = false;
+  if (!store.profiles || typeof store.profiles !== "object") { store.profiles = {}; changed = true; }
+  if (!store.watchlists || typeof store.watchlists !== "object") { store.watchlists = {}; changed = true; }
+  if (!Array.isArray(store.ratings)) { store.ratings = []; changed = true; }
+  return changed;
+}
+
 function getKv() {
   if (redisPromise !== undefined) return redisPromise;
   if (!process.env.KV_REST_API_URL || !process.env.KV_REST_API_TOKEN) return (redisPromise = Promise.resolve(null));
@@ -96,7 +104,10 @@ export async function readStore(): Promise<Store> {
   const remote = await getKv();
   if (remote) {
     const value = await remote.get<Store>("cinema:store");
-    if (value) return value;
+    if (value) {
+      ensureCollections(value);
+      return structuredClone(value);
+    }
   }
   if (memory) return structuredClone(memory);
   try {
@@ -146,6 +157,7 @@ export async function readStore(): Promise<Store> {
     });
     changed = true;
   }
+  changed ||= ensureCollections(memory);
   if (changed) await writeStore(memory);
   return structuredClone(memory);
 }

@@ -22,6 +22,7 @@ export type ShowtimeDraftInput = {
   id?: number;
   auditoriumId?: number;
   startTime?: string;
+  price?: number;
 };
 
 export function buildShowtime(store: Store, movie: Movie, input: ShowtimeDraftInput, existing?: Showtime, nextId?: number): { showtime?: Showtime; error?: string } {
@@ -34,7 +35,10 @@ export function buildShowtime(store: Store, movie: Movie, input: ShowtimeDraftIn
   if (!startTime || Number.isNaN(Date.parse(startTime))) return { error: "Pick a date and start time." };
   const id = nextId ?? existing?.id ?? Math.max(0, ...store.showtimes.map(item => item.id)) + 1;
   const keepSeats = existing && existing.auditorium === template.name;
-  const price = existing?.price ?? template.seats[0]?.price ?? 450;
+  const requestedPrice = Number(input.price);
+  const price = Number.isFinite(requestedPrice) && requestedPrice > 0
+    ? requestedPrice
+    : existing?.price ?? template.seats[0]?.price ?? 450;
   const seats: Seat[] = keepSeats
     ? existing!.seats.map(seat => ({ ...seat, price, variant: seat.variant ?? (template.type === "vip" ? "recliner" : "standard") }))
     : template.seats.map((seat, i) => {
@@ -108,10 +112,18 @@ export function validateShowtimeDrafts(store: Store, movie: Movie, drafts: Showt
   return { errors: conflicts, showtimes: Object.keys(conflicts).length ? undefined : candidates };
 }
 
-export const decorateMovie = (movie: Movie, store: Store): MovieWithShowtimes => ({
-  ...movie,
-  showtimes: store.showtimes.filter(item => item.movieId === movie.id && isAuditoriumOpen(store, item.auditorium))
-});
+export const decorateMovie = (movie: Movie, store: Store): MovieWithShowtimes => {
+  const ratings = store.ratings?.filter(item => item.movieId === movie.id) ?? [];
+  const avgRating = ratings.length
+    ? Math.round((ratings.reduce((sum, item) => sum + item.stars, 0) / ratings.length) * 10) / 10
+    : null;
+  return {
+    ...movie,
+    avgRating,
+    ratingCount: ratings.length,
+    showtimes: store.showtimes.filter(item => item.movieId === movie.id && isAuditoriumOpen(store, item.auditorium))
+  };
+};
 
 export const decorateShowtime = (showtime: Showtime, store: Store): ShowtimeWithMovie => ({
   ...showtime,

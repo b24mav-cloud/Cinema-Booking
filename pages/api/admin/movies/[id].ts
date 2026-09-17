@@ -5,15 +5,16 @@ import { requireUser } from "../../../../lib/api/auth";
 import { json, readBody, wrap } from "../../../../lib/api/respond";
 import type { Movie } from "../../../../lib/types";
 
-type ShowtimeInput = { id?: number; auditoriumId?: number; startTime?: string };
+type ShowtimeInput = { id?: number; auditoriumId?: number; startTime?: string; price?: number };
 type MovieInput = { title?: string; genre?: string; durationMinutes?: number; status?: string; cast?: string; description?: string; posterUrl?: string; trailerUrl?: string; showtimes?: ShowtimeInput[] };
 
-const trimShowtimes = (list: ShowtimeInput[] | undefined): { id?: number; auditoriumId?: number; startTime?: string }[] =>
+const trimShowtimes = (list: ShowtimeInput[] | undefined): { id?: number; auditoriumId?: number; startTime?: string; price?: number }[] =>
   (list ?? [])
     .map(item => ({
       id: Number.isInteger(item?.id) ? Number(item?.id) : undefined,
       auditoriumId: item?.auditoriumId === undefined || item?.auditoriumId === null ? undefined : Number(item?.auditoriumId),
-      startTime: typeof item?.startTime === "string" && item.startTime ? item.startTime : undefined
+      startTime: typeof item?.startTime === "string" && item.startTime ? item.startTime : undefined,
+      price: Number.isFinite(Number(item?.price)) && Number(item?.price) > 0 ? Number(item?.price) : undefined
     }))
     .filter(item => item.auditoriumId !== undefined || item.startTime !== undefined);
 
@@ -51,7 +52,7 @@ export default wrap(async (req: NextApiRequest, res: NextApiResponse) => {
   const hadShowtimes = store.showtimes.some(showtime => showtime.movieId === movie.id);
 
   if (input.showtimes !== undefined) {
-    const drafts = trimShowtimes(input.showtimes).map(item => ({ id: item.id, auditoriumId: item.auditoriumId, startTime: item.startTime }));
+    const drafts = trimShowtimes(input.showtimes).map(item => ({ id: item.id, auditoriumId: item.auditoriumId, startTime: item.startTime, price: item.price }));
     const validation = validateShowtimeDrafts(store, candidateMovie, drafts);
     if (Object.keys(validation.errors).length) return json(res, 400, { error: "Please fix the highlighted fields.", errors: { ...result.errors, ...validation.errors } });
     const candidates = validation.showtimes!;
