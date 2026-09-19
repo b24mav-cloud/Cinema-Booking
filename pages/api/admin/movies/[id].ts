@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { readStore, writeStore } from "../../../../lib/api/store";
 import { showtimeEnd, validateMovieInput, validateShowtimeDrafts, validateShowtimes } from "../../../../lib/api/cinema";
 import { requireUser } from "../../../../lib/api/auth";
+import { notifyMovieNowShowing } from "../../../../lib/api/notifications";
 import { json, readBody, wrap } from "../../../../lib/api/respond";
 import type { Movie } from "../../../../lib/types";
 
@@ -26,11 +27,13 @@ export default wrap(async (req: NextApiRequest, res: NextApiResponse) => {
   const id = Number(req.query.id);
   const movie = store.movies.find(item => item.id === id);
   if (!movie) return json(res, 404, "Movie was not found.");
+  const previousStatus = movie.status;
   const input = (await readBody<MovieInput>(req)) ?? {};
   if ("status" in input && Object.values(input).every(value => value === undefined || value === "")) {
     if (!["now showing", "coming soon", "archived"].includes(String(input.status))) return json(res, 400, "Choose a valid status.");
     movie.status = input.status as string;
     if (movie.status === "archived") movie.archivedAt = new Date().toISOString();
+    if (movie.status === "now showing" && previousStatus !== "now showing") notifyMovieNowShowing(store, movie.id);
     await writeStore(store);
     return json(res, 200, movie);
   }
@@ -68,6 +71,7 @@ export default wrap(async (req: NextApiRequest, res: NextApiResponse) => {
 
   Object.assign(movie, values);
   movie.archivedAt = movie.status === "archived" ? new Date().toISOString() : undefined;
+  if (movie.status === "now showing" && previousStatus !== "now showing") notifyMovieNowShowing(store, movie.id);
   await writeStore(store);
   return json(res, 200, movie);
 });

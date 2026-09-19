@@ -1,8 +1,15 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import type { Auditorium, Movie, Seat, Showtime, Store } from "../types";
+import type { AddOn, Auditorium, Movie, Seat, Showtime, Store } from "../types";
 import { showtimeEnd } from "./cinema";
+
+const DEFAULT_ADD_ONS: AddOn[] = [
+  { id: "popcorn", name: "Classic popcorn", description: "Freshly popped, salted just right", price: 180, icon: "🍿" },
+  { id: "soft-drink", name: "Soft drink", description: "Large soda, ice-cold", price: 90, icon: "🥤" },
+  { id: "combo", name: "Movie night combo", description: "Popcorn + soft drink", price: 240, icon: "🍿🥤", comboOf: ["popcorn", "soft-drink"] },
+  { id: "nachos", name: "Loaded nachos", description: "Cheesy, crunchy, shareable", price: 220, icon: "🧀" }
+];
 
 const DEFAULT_AUDITORIUMS: { id: number; name: string; type: "regular" | "vip" }[] = [
   { id: 1, name: "Auditorium 1", type: "regular" },
@@ -42,7 +49,7 @@ const seed = (): Store => {
     { id: 2, movieId: 2, experience: "Director's Cut", price: 450, startTime: new Date(tomorrow.getTime() + (20 * 60 + 30) * 60000).toISOString(), endTime: showtimeEnd(new Date(tomorrow.getTime() + (20 * 60 + 30) * 60000).toISOString(), movies[1].durationMinutes), auditorium: byId(2).name, auditoriumId: 2, auditoriumType: "regular", seats: seatFromTemplate(byId(2), 2, 450) },
     { id: 3, movieId: 1, experience: "Premium", price: 780, startTime: new Date(tomorrow.getTime() + 21 * 3600000).toISOString(), endTime: showtimeEnd(new Date(tomorrow.getTime() + 21 * 3600000).toISOString(), movies[0].durationMinutes), auditorium: byId(7).name, auditoriumId: 7, auditoriumType: "vip", seats: seatFromTemplate(byId(7), 3, 780) }
   ];
-  return { branches: ["CinemaBooking"], auditoriums, movies, showtimes, bookings: [], profiles: {}, watchlists: {}, ratings: [] };
+  return { branches: ["CinemaBooking"], auditoriums, movies, showtimes, bookings: [], profiles: {}, watchlists: {}, ratings: [], addOns: DEFAULT_ADD_ONS, notifications: [] };
 };
 
 const localFile = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "data", "cinema.json");
@@ -86,6 +93,8 @@ function ensureCollections(store: Store): boolean {
   if (!store.profiles || typeof store.profiles !== "object") { store.profiles = {}; changed = true; }
   if (!store.watchlists || typeof store.watchlists !== "object") { store.watchlists = {}; changed = true; }
   if (!Array.isArray(store.ratings)) { store.ratings = []; changed = true; }
+  if (!Array.isArray(store.addOns) || store.addOns.length === 0) { store.addOns = structuredClone(DEFAULT_ADD_ONS); changed = true; }
+  if (!Array.isArray(store.notifications)) { store.notifications = []; changed = true; }
   return changed;
 }
 

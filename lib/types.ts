@@ -7,8 +7,19 @@ export type MovieWithShowtimes = Movie & { showtimes: Showtime[]; avgRating?: nu
 export type Showtime = { id: number; movieId: number; startTime: string; endTime?: string; auditorium: string; auditoriumId?: number; auditoriumType?: "regular" | "vip"; experience?: string; price?: number; seats: Seat[] };
 export type ShowtimeDraft = { key: string; id?: number; auditoriumId?: number; date: string; time: string; price?: string; errors?: Record<string, string> };
 export type ShowtimeWithMovie = Showtime & { movie: Movie | null };
-export type AddOn = { id: string; name: string; description: string; price: number; icon: string };
+export type AddOn = { id: string; name: string; description: string; price: number; icon: string; comboOf?: string[] };
 export type AddOnSelection = { id: string; name: string; price: number };
+export type Notification = {
+  id: string;
+  userId: string;
+  role: "admin" | "customer";
+  kind: "sold-out" | "now-showing" | "watchlist-sold-out";
+  title: string;
+  message: string;
+  refId?: number;
+  createdAt: string;
+  readAt?: string | null;
+};
 export type SeatSnapshot = { row: string; number: number; price: number };
 export type Booking = {
   id: string;
@@ -34,6 +45,8 @@ export type Store = {
   profiles?: Record<string, CustomerProfile>;
   watchlists?: Record<string, number[]>;
   ratings?: Rating[];
+  addOns?: AddOn[];
+  notifications?: Notification[];
 };
 export type AuthUser = { id: string; email: string; role: "admin" | "customer"; metadata?: Record<string, unknown> };
 export type CustomerProfile = { name?: string; mobile?: string; paymentPrefs?: string[] };
@@ -50,9 +63,4 @@ export type Dashboard = {
   revenueToday?: number;
   avgOccupancyRate?: number;
 };
-export const addOns: AddOn[] = [
-  { id: "popcorn", name: "Classic popcorn", description: "Freshly popped, salted just right", price: 180, icon: "🍿" },
-  { id: "combo", name: "Movie night combo", description: "Popcorn + 2 drinks", price: 320, icon: "🥤" },
-  { id: "nachos", name: "Loaded nachos", description: "Cheesy, crunchy, shareable", price: 220, icon: "🧀" }
-];
 export const peso = (amount: number) => `₱${amount.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;

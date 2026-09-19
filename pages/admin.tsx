@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { SiteHeader } from "../components/SiteHeader";
 import { showtimeToIso } from "../lib/api/cinema";
-import { peso, type Movie, type Seat, type ShowtimeDraft } from "../lib/types";
+import { peso, type AddOn, type Movie, type Seat, type ShowtimeDraft } from "../lib/types";
 
 type AuditoriumStatus = "Open" | "Maintenance" | "Closed";
 type AuditoriumSummary = { id: number; name: string; type: "regular" | "vip"; status: AuditoriumStatus; seatCount: number };
@@ -12,6 +12,7 @@ type Dashboard = { moviesCurrentlyShowing: number; upcomingMovies: number; archi
 type AdminMovie = Movie & { showtimeCount: number; showtimes: { id: number; startTime: string; endTime?: string; auditorium: string; auditoriumId?: number; price?: number }[] };
 type EditorForm = { id: number | null; title: string; genre: string; runtime: string; status: string; cast: string; description: string; posterUrl: string; posterName: string; trailerUrl: string; showtimes: ShowtimeDraft[]; errors: Record<string, string> };
 type OccupancyDetail = { id: number; startTime: string; endTime?: string; auditorium: string; auditoriumType?: string; experience?: string; price?: number; movieTitle: string; moviePosterUrl: string; seats: Seat[] };
+type AddOnForm = { id: string | null; icon: string; name: string; description: string; price: string; comboOf: string[]; error: string };
 
 const STATUS_LABELS: Record<string, string> = { "now showing": "Now showing", "coming soon": "Coming soon", archived: "Archived" };
 const STATUS_CODES: Record<string, string> = { "now showing": "showing", "coming soon": "soon", archived: "archived" };
@@ -39,16 +40,19 @@ export default function Admin() {
   const [dragging, setDragging] = useState(false);
   const [occupancy, setOccupancy] = useState<number | null>(null);
   const [occupancyData, setOccupancyData] = useState<OccupancyDetail | null>(null);
+  const [addOns, setAddOns] = useState<AddOn[]>([]);
+  const [addOnForm, setAddOnForm] = useState<AddOnForm | null>(null);
 
   const notify = (message: string) => {
     setToast(message);
     window.setTimeout(() => setToast(""), 3200);
   };
   const load = () => {
-    Promise.all([fetch("/api/admin/dashboard"), fetch("/api/admin/movies")]).then(async ([dashboard, catalogue]) => {
-      if (!dashboard.ok || !catalogue.ok) return router.replace("/signin?next=/admin");
+    Promise.all([fetch("/api/admin/dashboard"), fetch("/api/admin/movies"), fetch("/api/admin/addons")]).then(async ([dashboard, catalogue, addOnList]) => {
+      if (!dashboard.ok || !catalogue.ok || !addOnList.ok) return router.replace("/signin?next=/admin");
       setStats(await dashboard.json());
       setMovies(await catalogue.json());
+      setAddOns(await addOnList.json());
     });
   };
   useEffect(load, [router]);
@@ -194,6 +198,33 @@ export default function Admin() {
     }
   };
 
+  const startAddOn = () => setAddOnForm({ id: null, icon: "🍿", name: "", description: "", price: "", comboOf: [], error: "" });
+  const editAddOn = (addOn: AddOn) => setAddOnForm({ id: addOn.id, icon: addOn.icon, name: addOn.name, description: addOn.description, price: String(addOn.price), comboOf: addOn.comboOf ?? [], error: "" });
+  const toggleComboMember = (memberId: string) => setAddOnForm(current => current ? { ...current, comboOf: current.comboOf.includes(memberId) ? current.comboOf.filter(id => id !== memberId) : [...current.comboOf, memberId] } : current);
+  const suggestedComboPrice = (comboOf: string[]) => comboOf.reduce((sum, id) => sum + (addOns.find(item => item.id === id)?.price ?? 0), 0);
+
+  const saveAddOn = async () => {
+    if (!addOnForm) return;
+    const price = Number(addOnForm.price);
+    if (!Number.isFinite(price) || price <= 0) return setAddOnForm({ ...addOnForm, error: "Set a positive price." });
+    const body = { name: addOnForm.name, description: addOnForm.description, price, icon: addOnForm.icon, comboOf: addOnForm.comboOf.length ? addOnForm.comboOf : undefined };
+    const endpoint = addOnForm.id ? `/api/admin/addons/${addOnForm.id}` : "/api/admin/addons";
+    const response = await fetch(endpoint, { method: addOnForm.id ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (!response.ok) {
+      const result = await response.json().catch(() => null);
+      return setAddOnForm({ ...addOnForm, error: result?.error ?? "Could not save the add-on." });
+    }
+    load();
+    setAddOnForm(null);
+    notify(addOnForm.id ? "Add-on updated." : "Add-on added.");
+  };
+
+  const deleteAddOn = async (addOn: AddOn) => {
+    if (!confirm(`Remove "${addOn.name}" from the add-on menu? Existing bookings keep their items.`)) return;
+    const response = await fetch(`/api/admin/addons/${addOn.id}`, { method: "DELETE" });
+    if (response.ok) { load(); notify("Add-on removed."); }
+  };
+
   const auditoriumGrid = stats?.auditoriums && (
     <section>
       <div className="section-heading"><div><p className="kicker">AUDITORIUMS</p><h2>Hall status</h2></div><Link className="button back-button" href="/admin/auditorium/1">Manage seat maps →</Link></div>
@@ -270,6 +301,33 @@ export default function Admin() {
       <div className="field"><span className="poster-label">Poster image{" "}<span className="muted">JPG/PNG under 1.5MB</span></span><div className={`dropzone ${dragging ? "dragging" : ""}`} onDragOver={e => { e.preventDefault(); setDragging(true); }} onDragLeave={() => setDragging(false)} onDrop={e => { e.preventDefault(); setDragging(false); onPoster(e.dataTransfer.files?.[0]); }}><input className="dropzone-input" type="file" accept="image/*" onChange={e => onPoster(e.target.files?.[0])} /><span>Drop a poster here or click to browse</span>{form.posterUrl && form.posterUrl.startsWith("data:") && <img src={form.posterUrl} alt="Poster preview" />}</div>{form.errors.poster && <span className="field-error">{form.errors.poster}</span>}</div>
       {form.errors.form && <p className="error">{form.errors.form}</p>}
       <div className="editor-actions"><button type="button" className="button back-button" onClick={() => setForm(null)}>Cancel</button>{form.id && form.status !== "archived" && <button type="button" className="button button-archive" onClick={() => archive(form.id!)}>Archive</button>}<button className="button gold-button" type="submit" disabled={busy}>{busy ? "Saving…" : form.id ? "Save changes" : "Add movie"}</button></div>
+    </form>}
+    </section>
+    <section className="summary-card admin-placeholder addons-section"><div className="section-heading"><div><p className="kicker">CONCESSIONS</p><h2>Add-ons &amp; combos</h2><p className="section-intro">Curate the treats your viewers can add to a booking.</p></div><div className="admin-actions"><button className="button gold-button" onClick={startAddOn}>+ Add add-on</button></div></div>
+    {addOns.length === 0 && <p className="showtime-note">No add-ons yet — add your first one above.</p>}
+    <div className="addon-admin-grid">
+      {addOns.map(addOn => {
+        const members = addOn.comboOf ?? [];
+        return <article className="addon-admin-card" key={addOn.id}>
+          <span className="addon-admin-icon">{addOn.icon}</span>
+          <div className="addon-admin-body"><h3>{addOn.name}</h3><p className="muted">{addOn.description}</p>{members.length > 0 && <span className="addon-admin-combo">{members.map(id => addOns.find(item => item.id === id)?.name ?? id).join(" + ")}</span>}<strong>{peso(addOn.price)}</strong></div>
+          <div className="addon-admin-actions"><button className="button back-button" onClick={() => editAddOn(addOn)}>Edit</button><button className="button button-archive" onClick={() => deleteAddOn(addOn)}>Remove</button></div>
+        </article>;
+      })}
+    </div>
+    {addOnForm && <form className="addon-editor" onSubmit={event => { event.preventDefault(); saveAddOn(); }}>
+      <div className="section-heading"><div><p className="kicker">{addOnForm.id ? "EDIT ADD-ON" : "NEW ADD-ON"}</p><h2>{addOnForm.id ? addOnForm.name || "Edit add-on" : "Add an add-on"}</h2></div></div>
+      <div className="form-row"><label className="field">Icon<input value={addOnForm.icon} onChange={e => setAddOnForm({ ...addOnForm, icon: e.target.value })} placeholder="🍿" /></label>
+        <label className="field">Name<input value={addOnForm.name} onChange={e => setAddOnForm({ ...addOnForm, name: e.target.value })} placeholder="e.g. Loaded nachos" /></label></div>
+      <label className="field">Short description<textarea rows={2} value={addOnForm.description} onChange={e => setAddOnForm({ ...addOnForm, description: e.target.value })} placeholder="Shown next to the price at booking time." /></label>
+      <label className="field">Price (₱)<input type="number" min={1} value={addOnForm.price} onChange={e => setAddOnForm({ ...addOnForm, price: e.target.value })} />{addOnForm.comboOf.length > 0 && <span className="field-hint">Suggested combo price: {peso(suggestedComboPrice(addOnForm.comboOf))}</span>}</label>
+      <div className="field"><span className="poster-label">Combo of existing add-ons{" "}<span className="muted">select the items this combo includes</span></span>
+        {addOns.length > 1
+          ? <div className="payment-prefs">{addOns.filter(item => item.id !== addOnForm.id).map(item => { const on = addOnForm.comboOf.includes(item.id); return <button type="button" key={item.id} className={`payment-pref${on ? " on" : ""}`} onClick={() => toggleComboMember(item.id)}><span>{item.icon}</span><b>{item.name}</b>{on ? " ✓" : ""}</button>; })}</div>
+          : <p className="showtime-note">Add at least two add-ons before creating a combo.</p>}
+      </div>
+      {addOnForm.error && <p className="error">{addOnForm.error}</p>}
+      <div className="editor-actions"><button type="button" className="button back-button" onClick={() => setAddOnForm(null)}>Cancel</button><button className="button gold-button" type="submit">{addOnForm.id ? "Save changes" : "Add add-on"}</button></div>
     </form>}
     </section>
     {toast && <div className="toast">{toast}</div>}

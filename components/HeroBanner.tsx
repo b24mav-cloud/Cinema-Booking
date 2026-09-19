@@ -15,15 +15,13 @@ type Slide = {
 
 export type BannerTab = "showing" | "soon";
 
-const PROMO_IMAGE = "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1800&q=85";
-
 const promoSlide = (): Slide => ({
   id: "promo",
   kind: "promo",
   kicker: "THE CINEMA, REIMAGINED",
   title: "Your night.\nYour way.",
   tagline: "Premium screens, plush seats, and stories worth staying up for. Make your next movie night memorable.",
-  image: PROMO_IMAGE
+  image: undefined
 });
 
 export function HeroBanner({ onCta }: { onCta?: (tab: BannerTab) => void }) {
@@ -105,6 +103,7 @@ export function HeroBanner({ onCta }: { onCta?: (tab: BannerTab) => void }) {
     onFocus={pause} onBlur={resume}
     onPointerDown={pause} onPointerUp={resume} onPointerCancel={resume}
   >
+    <div className="hero-banner-ambient" aria-hidden />
     {slides.map((slide, index) => <div className={`hero-banner-slide${index === active ? " is-active" : ""}`} key={slide.id} aria-hidden={index !== active} aria-roledescription="slide">
       {slide.image && <img className="hero-banner-bg" src={slide.image} alt="" draggable={false} loading={index > 0 ? "lazy" : undefined} />}
       <div className="hero-banner-scrim" />

@@ -2,15 +2,10 @@ import { randomUUID } from "node:crypto";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { readStore, writeStore } from "../../../lib/api/store";
 import { decorateShowtime, isAuditoriumOpen } from "../../../lib/api/cinema";
+import { checkShowtimeSoldOut } from "../../../lib/api/notifications";
 import { getSessionUser } from "../../../lib/api/auth";
 import { json, readBody, wrap } from "../../../lib/api/respond";
 import type { AddOnSelection, SeatSnapshot } from "../../../lib/types";
-
-const catalog: Record<string, { name: string; price: number }> = {
-  popcorn: { name: "Classic popcorn", price: 180 },
-  combo: { name: "Movie night combo", price: 320 },
-  nachos: { name: "Loaded nachos", price: 220 }
-};
 
 export default wrap(async (req: NextApiRequest, res: NextApiResponse) => {
   const store = await readStore();
@@ -32,6 +27,9 @@ export default wrap(async (req: NextApiRequest, res: NextApiResponse) => {
     if (seatObjects.length !== seatIds.length) return json(res, 400, "One or more seats do not belong to the selected showtime.");
     if (seatObjects.some(seat => seat.status !== "Available")) return json(res, 409, "One or more selected seats are no longer available.");
     seatObjects.forEach(seat => { seat.status = "Reserved"; });
+    const catalog: Record<string, { name: string; price: number }> = Object.fromEntries(
+      (store.addOns ?? []).map(addOn => [addOn.id, { name: addOn.name, price: addOn.price }])
+    );
     const addOnSelections: AddOnSelection[] = [...new Set(input.addOns ?? [])]
       .filter(item => catalog[item])
       .map(item => ({ id: item, ...catalog[item] }));
@@ -53,6 +51,7 @@ export default wrap(async (req: NextApiRequest, res: NextApiResponse) => {
       isConfirmed: false
     };
     store.bookings.push(booking);
+    checkShowtimeSoldOut(store, showtime.id);
     await writeStore(store);
     json(res, 201, booking, { Location: `/api/bookings/${booking.id}` });
     return;
