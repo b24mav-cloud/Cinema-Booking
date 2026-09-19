@@ -1,5 +1,5 @@
 import { Head, Html, Main, NextScript } from "next/document";
 
 export default function Document() {
-  return <Html lang="en"><Head><link rel="icon" type="image/svg+xml" href="/cinema-logo.svg" /></Head><body><Main /><NextScript /></body></Html>;
+  return <Html lang="en"><Head><link rel="icon" type="image/png" href="/cinema-logo.png" /></Head><body><Main /><NextScript /></body></Html>;
 }
