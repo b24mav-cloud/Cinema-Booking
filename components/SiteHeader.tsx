@@ -19,7 +19,7 @@ export function SiteHeader({ admin = false }: { admin?: boolean }) {
   const user = me?.user ?? null;
   const signOut = async () => { await fetch("/api/auth/signout", { method: "POST" }); setMe(null); router.push("/"); };
   return <header className="site-header"><nav className="nav shell">
-    <Link className="brand text-decoration-none" href="/"><img className="brand-mark" src="/cinema-logo.png" alt="CinemaBooking" width={64} height={64} /><span>Cinema<span className="gold">Booking</span>{admin ? " Admin" : ""}</span></Link>
+    <Link className="brand text-decoration-none" href="/"><img className="brand-mark" src="/cb-logo.svg" alt="CinemaBooking" width={64} height={64} /><span>Cinema<span className="gold">Booking</span>{admin ? " Admin" : ""}</span></Link>
     {admin ? null : <div className="nav-links">{user ? <>{user.role === "admin" ? <Link href="/admin">Dashboard</Link> : <Link href="/account">My account</Link>}<button className="nav-link-button" onClick={signOut}>Sign out</button></> : <><a href="/#booking">Now showing</a><a href="/#how">About us</a><Link href="/signin">Sign in</Link></>}</div>}
   </nav></header>;
 }
