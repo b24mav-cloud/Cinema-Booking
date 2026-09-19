@@ -9,6 +9,7 @@
     "build": "next build",
 "start": "next start",
     "seed:dev": "node scripts/seed-dev.mjs",
+    "migrate:kv": "node scripts/migrate-kv.mjs",
     "typecheck": "tsc --noEmit"
   },
   "engines": {

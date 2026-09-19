@@ -102,8 +102,25 @@ quiet crossfade with no autoplay under `prefers-reduced-motion`.
 
 ## Data
 
-The data layer uses Vercel KV when `KV_REST_API_URL` and `KV_REST_API_TOKEN` are
-configured. Without those credentials it seeds and persists `data/cinema.json`
-locally; on Vercel's read-only filesystem it falls back to per-instance memory,
-so bookings are not durable or shared. Configure KV (or replace `lib/api/store.ts`
-with another managed database adapter) for production persistence.
+The data layer uses **Vercel KV** (Upstash Redis) when `KV_REST_API_URL` and
+`KV_REST_API_TOKEN` are configured; set them in the Vercel project environment
+**and** your gitignored `.env.local` so local dev and the deployed site share the
+same durable store. Without those credentials the store falls back to
+`data/cinema.json` locally, or per-instance memory on Vercel's read-only
+filesystem (writes are logged, not silent, but are not durable or shared).
+
+### Migrating to Vercel KV
+
+1. Create a KV store: Vercel dashboard → Storage → Create → KV (or
+   `vercel kv create`). Add `KV_REST_API_URL` and `KV_REST_API_TOKEN` to the
+   project environment and to `.env.local` (see `.env.example`).
+2. Push the current local data into KV once:
+
+   ```bash
+   npm run migrate:kv
+   ```
+
+   The script reads `data/cinema.json`, removes duplicate/legacy records,
+   normalizes movies/auditoriums/showtimes, and stores the result at
+   `cinema:store`. KV is then the source of truth; `data/cinema.json` remains a
+   local-only fallback.

@@ -88,6 +88,20 @@ function normalizeAuditoriums(list: unknown): { auditoriums: Auditorium[]; chang
   return { auditoriums: result, changed };
 }
 
+const showtimeCompleteness = (showtime: Showtime): number =>
+  [showtime.endTime, showtime.auditoriumId, showtime.auditoriumType, showtime.experience, showtime.price]
+    .filter(value => value !== undefined)
+    .length;
+
+function dedupeShowtimes(list: Showtime[]): Showtime[] {
+  const byId = new Map<number, Showtime>();
+  for (const showtime of list) {
+    const existing = byId.get(showtime.id);
+    if (!existing || showtimeCompleteness(showtime) > showtimeCompleteness(existing)) byId.set(showtime.id, showtime);
+  }
+  return [...byId.values()].sort((a, b) => a.id - b.id);
+}
+
 function ensureCollections(store: Store): boolean {
   let changed = false;
   if (!store.profiles || typeof store.profiles !== "object") { store.profiles = {}; changed = true; }
@@ -115,6 +129,7 @@ export async function readStore(): Promise<Store> {
     const value = await remote.get<Store>("cinema:store");
     if (value) {
       ensureCollections(value);
+      value.showtimes = dedupeShowtimes(value.showtimes);
       return structuredClone(value);
     }
   }
@@ -133,6 +148,9 @@ export async function readStore(): Promise<Store> {
   const live = memory;
   const branches = ["CinemaBooking"];
   if (JSON.stringify(memory.branches) !== JSON.stringify(branches)) { memory.branches = branches; changed = true; }
+  const showtimesBefore = memory.showtimes.length;
+  memory.showtimes = dedupeShowtimes(memory.showtimes);
+  changed ||= memory.showtimes.length !== showtimesBefore;
   const normalized = normalizeAuditoriums(memory.auditoriums);
   memory.auditoriums = normalized.auditoriums;
   changed ||= normalized.changed;
@@ -178,10 +196,15 @@ export async function writeStore(store: Store): Promise<void> {
     await remote.set("cinema:store", memory);
     return;
   }
+  const tmpFile = `${localFile}.tmp`;
   try {
     await fs.mkdir(path.dirname(localFile), { recursive: true });
-    await fs.writeFile(localFile, JSON.stringify(memory, null, 2));
-  } catch {
-    // Vercel's filesystem is read-only; memory remains a useful fallback.
+    await fs.writeFile(tmpFile, JSON.stringify(memory, null, 2));
+    await fs.rename(tmpFile, localFile);
+  } catch (error) {
+    // Do not fake success: log loudly so a failed save is visible instead of
+    // silently losing data. Memory still serves the current process.
+    console.error("[cinema-store] Failed to persist data/cinema.json (changes are memory-only until restart):", error);
+    try { await fs.rm(tmpFile, { force: true }); } catch { /* best effort */ }
   }
 }
