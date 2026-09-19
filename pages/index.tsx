@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import Head from "next/head";
 import { useRouter } from "next/router";
 import { SiteHeader } from "../components/SiteHeader";
+import { SiteFooter } from "../components/SiteFooter";
 import { HeroBanner, BannerTab } from "../components/HeroBanner";
 import { MovieBrowser } from "../components/MovieBrowser";
 import { addOns, Movie, MovieWithShowtimes, peso, Showtime } from "../lib/types";
@@ -35,5 +36,5 @@ export default function Home() {
       <div className="wizard-actions"><button className="button back-button" hidden={step === 1} onClick={() => setStep(step - 1)}>← Back</button><button className="button gold-button" hidden={step >= 5} onClick={next}>Continue →</button></div></>}
       {confirmation && <div className="confirmation"><span className="confirm-icon">✓</span><p className="kicker">YOU'RE ALL SET</p><h2>Enjoy the show.</h2><p>Your booking is confirmed. A receipt is on its way to <strong>{email}</strong>.</p><div><strong>{movie?.title}</strong> · {seats.length} seat{seats.length !== 1 && "s"} · {peso(total)}<br /><small>Confirmation #{confirmation.slice(0, 8).toUpperCase()}</small></div></div>}
     </section><section className="how shell" id="how"><p className="kicker">SIMPLE BY DESIGN</p><h2>Your seat is three steps away.</h2><div className="how-grid">{[["01", "Pick a film", "Browse stories curated for the big screen."], ["02", "Make it yours", "Choose your seats and favorite treats."], ["03", "Walk in ready", "Your booking waits when the lights go down."]].map(([n, h, p]) => <article key={n}><b>{n}</b><h3>{h}</h3><p>{p}</p></article>)}</div></section>
-  </main><footer className="footer shell"><strong>CB CinemaBooking</strong><span>Good films. Great company. © 2026</span></footer></>;
+  </main><SiteFooter /></>;
 }
