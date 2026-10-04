@@ -63,6 +63,10 @@ export function SeatMap({ seats, selected, isVip, disabled, onToggle, onSelectSe
 
   const freeByRow = rows.map(({ row, seats: list }) => ({ row, count: list.filter(seat => seat.status === "Available").length }));
 
+  // The widest row decides the grid, so a 6-wide auditorium does not inherit the
+  // 10 columns the stylesheet used to assume and end up with four dead tracks.
+  const columns = Math.max(1, ...rows.map(({ seats: list }) => list.length));
+
   /**
    * Resolves the quick-pick request here, where the suggestion is computed, and
    * hands the concrete seat ids upward. Previously this only asked "is there a
@@ -116,7 +120,7 @@ export function SeatMap({ seats, selected, isVip, disabled, onToggle, onSelectSe
 
       <div className="screen" aria-hidden="true"><span>SCREEN</span></div>
 
-      <div className={`seat-map ${isVip ? "vip" : "regular"}`} ref={gridRef} role="grid" aria-label="Seat map" aria-rowcount={rows.length}>
+      <div className={`seat-map ${isVip ? "vip" : "regular"}`} style={{ "--seat-cols": columns } as React.CSSProperties} ref={gridRef} role="grid" aria-label="Seat map" aria-rowcount={rows.length}>
         {rows.map(({ row, seats: rowSeats }) => (
           <div className="seat-row" role="row" key={row}>
             <span className="row-label" role="rowheader">{row}</span>
@@ -145,6 +149,8 @@ export function SeatMap({ seats, selected, isVip, disabled, onToggle, onSelectSe
           </div>
         ))}
       </div>
+
+      <p className="seat-scroll-hint">Scroll sideways to see every seat</p>
 
       <p className="seat-availability" role="status" aria-live="polite">
         {freeByRow.map(({ row, count }) => `${row}: ${count}`).join(" · ")}

@@ -245,7 +245,7 @@ export default function MovieDetail({ movie: initial, showtimes: initialShowtime
 
 export const getServerSideProps: GetServerSideProps<Props> = async ({ params }) => {
   const id = Number(params?.id);
-  const [{ readStore }, { decorateMovie, decorateShowtime, isAuditoriumOpen }] = await Promise.all([
+  const [{ readStore }, { decorateMovie, decorateShowtime, isBookable }] = await Promise.all([
     import("../../lib/api/store"),
     import("../../lib/api/cinema")
   ]);
@@ -255,7 +255,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ params }) 
   if (!movie) return { notFound: true };
 
   const showtimes = store.showtimes
-    .filter(item => item.movieId === movie.id && isAuditoriumOpen(store, item.auditorium))
+    .filter(item => item.movieId === movie.id && isBookable(item, store))
     .map(item => decorateShowtime(item, store));
 
   const related = store.movies

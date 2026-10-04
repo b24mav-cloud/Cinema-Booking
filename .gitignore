@@ -6,6 +6,7 @@ tsconfig.tsbuildinfo
 !.env.example
 .vercel/
 data/cinema.json
+data/backups/
 
 .vercel
 .env*

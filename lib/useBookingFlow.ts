@@ -213,7 +213,11 @@ export function useBookingFlow(initialMovieId?: number) {
         // Put the optimistic selection back and refresh from the server.
         setSeats(seats);
         if (err instanceof ApiError && err.status === 409) {
-          setNotice("Someone got there first — we've refreshed the seat map. Please choose again.");
+          // The server distinguishes "someone beat you to it" from "that show
+          // already started" or "auditorium shut". Trust its message instead of
+          // always blaming another customer, which sent people hunting for a
+          // seat race that never happened.
+          setNotice(errorMessage(err, "Someone got there first — we've refreshed the seat map. Please choose again."));
           await refreshShowtime(showtime.id);
         } else {
           setError(errorMessage(err, "We couldn't hold those seats. Please try again."));
@@ -243,7 +247,7 @@ export function useBookingFlow(initialMovieId?: number) {
       } catch (err) {
         setSeats([]);
         if (err instanceof ApiError && err.status === 409) {
-          setNotice("Those seats just went. We've refreshed the map — please pick again.");
+          setNotice(errorMessage(err, "Those seats just went. We've refreshed the map — please pick again."));
           await refreshShowtime(showtime.id);
         } else {
           setError(errorMessage(err, "We couldn't hold those seats. Please try again."));

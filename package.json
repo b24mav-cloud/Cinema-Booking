@@ -9,6 +9,7 @@
     "build": "npm run check:css && next build",
     "start": "next start",
     "seed:dev": "node scripts/seed-dev.mjs",
+    "seed:showtimes": "node scripts/seed-showtimes.mjs",
     "migrate:kv": "node scripts/migrate-kv.mjs",
     "check:css": "node scripts/check-css.mjs",
     "typecheck": "tsc --noEmit"

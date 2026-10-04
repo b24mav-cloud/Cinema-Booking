@@ -121,7 +121,7 @@ export const decorateMovie = (movie: Movie, store: Store): MovieWithShowtimes =>
     ...movie,
     avgRating,
     ratingCount: ratings.length,
-    showtimes: store.showtimes.filter(item => item.movieId === movie.id && isAuditoriumOpen(store, item.auditorium))
+    showtimes: store.showtimes.filter(item => item.movieId === movie.id && isBookable(item, store))
   };
 };
 
@@ -132,6 +132,15 @@ export const decorateShowtime = (showtime: Showtime, store: Store): ShowtimeWith
 
 export const isAuditoriumOpen = (store: Store, name: string): boolean =>
   (store.auditoriums.find(auditorium => auditorium.name === name)?.status ?? "Open") === "Open";
+
+/**
+ * A showtime is only worth offering if the auditorium is open *and* it has not
+ * started. Without the second check a stale schedule hands customers seats that
+ * render as open and then fail at the hold step with "This show has already
+ * started", which reads as an unclickable seat rather than an expired show.
+ */
+export const isBookable = (showtime: Showtime, store: Store): boolean =>
+  isAuditoriumOpen(store, showtime.auditorium) && new Date(showtime.startTime).getTime() > Date.now();
 
 export function syncAuditoriumSeats(store: Store, auditorium: Auditorium): number {
   let synced = 0;
