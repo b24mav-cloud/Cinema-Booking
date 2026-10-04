@@ -111,7 +111,8 @@ export function MovieBrowser({ movies, activeTab, onTabChange, selectedId, onSel
     return () => cancelAnimationFrame(raf);
   }, [visible]);
 
-  return <div className="browse">
+  return (
+    <>
     <div className="browse-tabs" role="tablist" aria-label="Films">
       <button type="button" role="tab" id="browse-tab-showing" aria-selected={activeTab === "showing"} className={`browse-tab${activeTab === "showing" ? " active" : ""}`} onClick={() => onTabChange("showing")}>Now Showing<span className="browse-tab-count">{showing.length}</span></button>
       <button type="button" role="tab" id="browse-tab-soon" aria-selected={activeTab === "soon"} className={`browse-tab${activeTab === "soon" ? " active" : ""}`} onClick={() => onTabChange("soon")}>Coming Soon<span className="browse-tab-count">{soon.length}</span></button>
@@ -194,5 +195,6 @@ export function MovieBrowser({ movies, activeTab, onTabChange, selectedId, onSel
       {layout === "strip" && <button type="button" className="movie-strip-arrow next" disabled={reachedEnds.end || visible.length === 0} onClick={() => scrollByCards(1)} aria-label="Next films">→</button>}
     </div>
     {trailer && <TrailerModal title={trailer.movie.title} url={trailer.movie.trailerUrl!} trigger={trailer.trigger} onClose={() => setTrailer(null)} />}
-  </div>;
+    </>
+  );
 }

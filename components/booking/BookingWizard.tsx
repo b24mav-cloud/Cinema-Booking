@@ -64,7 +64,6 @@ export function BookingWizard({ flow, browseTab, onTabChange }: {
       seatTotal={flow.seatTotal}
       extrasTotal={flow.extrasTotal}
       total={flow.total}
-      secondsLeft={flow.secondsLeft}
       step={flow.step}
     />
   );
@@ -150,7 +149,7 @@ export function BookingWizard({ flow, browseTab, onTabChange }: {
               selected={flow.seats}
               isVip={flow.showtime.auditoriumType === "vip"}
               onToggle={flow.toggleSeat}
-              onAutoPick={flow.autoPickSeats}
+              onSelectSeats={ids => void flow.selectSeats(ids)}
             />
           </div>
           {summary}

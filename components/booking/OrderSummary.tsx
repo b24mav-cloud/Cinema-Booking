@@ -12,19 +12,15 @@ type Props = {
   seatTotal: number;
   extrasTotal: number;
   total: number;
-  secondsLeft?: number;
   step: number;
 };
-
-const mmss = (seconds: number) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 
 const longDate = (iso?: string) =>
   iso
     ? new Date(iso).toLocaleString(undefined, { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })
     : "Choose a showtime";
 
-export function OrderSummary({ movieTitle, movieId, showtime, seats, extras, catalog, seatTotal, extrasTotal, total, secondsLeft = 0, step }: Props) {
-  const urgent = secondsLeft > 0 && secondsLeft <= 60;
+export function OrderSummary({ movieTitle, movieId, showtime, seats, extras, catalog, seatTotal, extrasTotal, total, step }: Props) {
   const chosen = extras.map(id => catalog.find(item => item.id === id)).filter((item): item is AddOn => Boolean(item));
 
   return (
@@ -36,13 +32,6 @@ export function OrderSummary({ movieTitle, movieId, showtime, seats, extras, cat
       )}
       <p className="muted">{showtime ? longDate(showtime.startTime) : "Choose a showtime"}</p>
       {showtime && <p className="muted">{showtime.auditorium}{showtime.auditoriumType === "vip" && <span className="vip-badge">VIP</span>}</p>}
-
-      {secondsLeft > 0 && (
-        <p className={`hold-timer${urgent ? " urgent" : ""}`} role="status" aria-live="polite">
-          {urgent ? "Hurry — " : "Seats held for "}
-          <strong>{mmss(secondsLeft)}</strong>
-        </p>
-      )}
 
       <div className="order-lines">
         <span>

@@ -62,7 +62,7 @@ export function ConfirmationPanel({ booking, signedIn, onDone }: Props) {
         {booking.seatSnapshot.length} {booking.seatSnapshot.length === 1 ? "seat" : "seats"} for <strong>{booking.movieTitle}</strong> in {booking.auditorium}.
       </p>
 
-<dl className="confirmation-details" id="confirmDetails">
+<dl id="confirmDetails">
         <div><dt>When</dt><dd>{booking.showtime ? longDate(booking.showtime.startTime) : "—"}</dd></div>
         <div><dt>Where</dt><dd>{booking.auditorium}</dd></div>
         <div><dt>Seats</dt><dd>{seatText}</dd></div>

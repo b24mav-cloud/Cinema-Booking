@@ -300,7 +300,7 @@ export default function Account() {
                 <Link className="button gold-button" href="/">Browse films →</Link>
               </div>
             ) : (
-              <div className="account-list history-list">
+              <div className="account-list">
                 {past.map(item => (
                   <article className="account-booking history-item" key={item.id}>
                     <div>

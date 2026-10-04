@@ -8,7 +8,7 @@ type Props = {
   isVip: boolean;
   disabled?: boolean;
   onToggle: (seatId: number) => void;
-  onAutoPick: (count: number) => void;
+  onSelectSeats: (seatIds: number[]) => void;
 };
 
 const seatCode = (seat: Seat) => `${seat.row}${seat.number}`;
@@ -47,7 +47,7 @@ function suggest(seats: Seat[], count: number): number[] {
   return best?.ids ?? [];
 }
 
-export function SeatMap({ seats, selected, isVip, disabled, onToggle, onAutoPick }: Props) {
+export function SeatMap({ seats, selected, isVip, disabled, onToggle, onSelectSeats }: Props) {
   const gridRef = useRef<HTMLDivElement>(null);
   const rows = useMemo(() => {
     const grouped = new Map<string, Seat[]>();
@@ -63,8 +63,15 @@ export function SeatMap({ seats, selected, isVip, disabled, onToggle, onAutoPick
 
   const freeByRow = rows.map(({ row, seats: list }) => ({ row, count: list.filter(seat => seat.status === "Available").length }));
 
+  /**
+   * Resolves the quick-pick request here, where the suggestion is computed, and
+   * hands the concrete seat ids upward. Previously this only asked "is there a
+   * suggestion?" and let the caller pick independently, so the check and the
+   * selection could disagree.
+   */
   const runSuggestion = (count: number) => {
-    if (suggest(seats, count).length) onAutoPick(count);
+    const ids = suggest(seats, count);
+    if (ids.length) onSelectSeats(ids);
   };
 
   /** Arrow keys move between seats the way a seat map should behave. */
@@ -113,29 +120,27 @@ export function SeatMap({ seats, selected, isVip, disabled, onToggle, onAutoPick
         {rows.map(({ row, seats: rowSeats }) => (
           <div className="seat-row" role="row" key={row}>
             <span className="row-label" role="rowheader">{row}</span>
-            <div className="seat-row-cells" role="presentation">
-              {rowSeats.map(seat => {
-                const taken = seat.status !== "Available";
-                const isSelected = selected.includes(seat.id);
-                const state = taken ? (seat.status === "OutOfService" ? "not for sale" : "taken") : isSelected ? "selected by you" : "available";
-                return (
-                  <button
-                    type="button"
-                    role="gridcell"
-                    key={seat.id}
-                    className={`seat ${seat.status.toLowerCase()}${isSelected ? " selected" : ""}${seat.variant === "recliner" ? " recliner" : ""}`}
-                    disabled={disabled || taken}
-                    aria-selected={isSelected}
-                    aria-label={`Seat ${seatCode(seat)}, ${state}`}
-                    title={`Seat ${seatCode(seat)} · ${state}`}
-                    onClick={() => onToggle(seat.id)}
-                    onKeyDown={onKeyDown}
-                  >
-                    <span aria-hidden="true">{seat.number}</span>
-                  </button>
-                );
-              })}
-            </div>
+            {rowSeats.map(seat => {
+              const taken = seat.status !== "Available";
+              const isSelected = selected.includes(seat.id);
+              const state = taken ? (seat.status === "OutOfService" ? "not for sale" : "taken") : isSelected ? "selected by you" : "available";
+              return (
+                <button
+                  type="button"
+                  role="gridcell"
+                  key={seat.id}
+                  className={`seat ${seat.status.toLowerCase()}${isSelected ? " selected" : ""}${seat.variant === "recliner" ? " recliner" : ""}`}
+                  disabled={disabled || taken}
+                  aria-selected={isSelected}
+                  aria-label={`Seat ${seatCode(seat)}, ${state}`}
+                  title={`Seat ${seatCode(seat)} · ${state}`}
+                  onClick={() => onToggle(seat.id)}
+                  onKeyDown={onKeyDown}
+                >
+                  <span aria-hidden="true">{seat.number}</span>
+                </button>
+              );
+            })}
             <span className="row-label" role="rowheader">{row}</span>
           </div>
         ))}

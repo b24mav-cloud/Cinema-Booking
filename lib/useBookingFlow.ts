@@ -63,7 +63,6 @@ export function useBookingFlow(initialMovieId?: number) {
   const [submitting, setSubmitting] = useState(false);
 
   const [hold, setHold] = useState<HoldState>(null);
-  const [secondsLeft, setSecondsLeft] = useState(0);
 
   const holdRef = useRef<HoldState>(null);
   holdRef.current = hold;
@@ -121,25 +120,19 @@ export function useBookingFlow(initialMovieId?: number) {
     return () => { active = false; };
   }, []);
 
-  // Hold countdown. On expiry the seats are released server-side too, so the UI
-  // just needs to stop pretending they are secured.
+  // The server expires the hold too, so the client only needs to notice once and
+  // put the customer back on the seat map. A single timeout instead of a
+  // per-second tick keeps the hold a background concern rather than a countdown
+  // the customer is made to watch.
   useEffect(() => {
-    if (!hold) {
-      setSecondsLeft(0);
-      return;
-    }
-    const tick = () => {
-      const remaining = Math.max(0, Math.round((new Date(hold.expiresAt).getTime() - Date.now()) / 1000));
-      setSecondsLeft(remaining);
-      if (remaining === 0) {
-        setHold(null);
-        setSeats([]);
-        setNotice("Your seat hold expired. Pick your seats again to continue.");
-      }
-    };
-    tick();
-    const timer = setInterval(tick, 1000);
-    return () => clearInterval(timer);
+    if (!hold) return;
+    const remaining = new Date(hold.expiresAt).getTime() - Date.now();
+    const timer = setTimeout(() => {
+      setHold(null);
+      setSeats([]);
+      setNotice("Your seat hold expired. Pick your seats again to continue.");
+    }, Math.max(0, remaining));
+    return () => clearTimeout(timer);
   }, [hold]);
 
   // Release the hold if the tab is closed mid-checkout.
@@ -230,32 +223,12 @@ export function useBookingFlow(initialMovieId?: number) {
     [seats, showtime, clearHold]
   );
 
-  /** Picks the best contiguous run of `count` seats, centred on the middle row. */
-  const autoPickSeats = useCallback(
-    (count: number) => {
-      if (!showtime) return;
-      const rows = [...new Set(showtime.seats.map(seat => seat.row))];
-      const middle = rows[Math.floor(rows.length / 2)];
-      const ordered = [...rows].sort((a, b) => (a === middle ? -1 : b === middle ? 1 : a.localeCompare(b)));
-      const available = showtime.seats.filter(seat => seat.status === "Available");
-      for (const row of ordered) {
-        const inRow = available.filter(seat => seat.row === row).sort((a, b) => a.number - b.number);
-        const run: Seat[] = [];
-        for (const seat of inRow) {
-          if (run.length && seat.number !== run[run.length - 1].number + 1) run.length = 0;
-          run.push(seat);
-          if (run.length === count) {
-            void toggleSeatMany(run.map(seat => seat.id));
-            return;
-          }
-        }
-      }
-      setError(`No row has ${count} seats free together. Try fewer seats.`);
-    },
-    [showtime]
-  );
-
-  const toggleSeatMany = useCallback(
+  /**
+   * Claims an explicit set of seats. "Best available" suggestions are computed
+   * in `SeatMap.suggest` and arrive here as ids, so the decision about *what* to
+   * pick lives in exactly one place.
+   */
+  const selectSeats = useCallback(
     async (seatIds: number[]) => {
       if (!showtime) return;
       setSeats(seatIds);
@@ -407,14 +380,13 @@ export function useBookingFlow(initialMovieId?: number) {
     notice,
     submitting,
     hold,
-    secondsLeft,
     seatTotal,
     extrasTotal,
     total,
     chooseMovie,
     chooseShowtime,
     toggleSeat,
-    autoPickSeats,
+    selectSeats,
     toggleExtra,
     goToStep,
     next,
