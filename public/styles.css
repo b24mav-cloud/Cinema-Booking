@@ -646,3 +646,187 @@ h1,h2,h3{font-family:var(--font-display),system-ui,-apple-system,"Segoe UI",Robo
   .seat-quickpick{margin-left:0;width:100%}
   .seat-legend{gap:12px}
 }
+
+/* ===========================================================================
+   UI audit: fonts, stepper, seat map, film cards, filter bar, admin cards
+   ===========================================================================
+
+   Font variables.
+   Two separate faults made every `var(--font-*)` unresolvable, so each `font`
+   shorthand using one was dropped at computed-value time and the browser fell
+   back to its default *serif* face - the Times-like body copy, buttons and
+   inputs. 1) The variables were attached to a wrapper element, and a custom
+   property is only inherited downwards, never up to `body`. 2) next/font is not
+   supported in _document, so the variables are attached in _app instead.
+   The type stack now lives on `.app-root`, where the loader actually puts them,
+   and :root declares a system stack so a font that fails to download degrades to
+   system-ui rather than reintroducing serif. */
+:root{
+  --font-sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --font-display:var(--font-sans);
+  --font-mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --shell-gutter:48px;
+  --tap-min:44px;
+}
+.app-root{min-height:100vh;font:450 15px var(--font-sans);color:var(--ink)}
+@media(max-width:639px){:root{--shell-gutter:32px}}
+
+/* Stepper.
+   `.wizard` is an <ol> and never declared list-style, so the browser painted its
+   own counters ("1.", "2.") next to the real "01"/"02" step numbers and the
+   labels collided. `.wizard>i` was also dead: the markup never rendered an <i>.
+   Steps are now flex items with a connector between them, and on phones the
+   labels collapse to a "Step n of 5" line plus a progress bar. */
+.wizard{list-style:none;display:flex;align-items:center;margin:0 0 28px;padding:0;gap:0;overflow:visible}
+.wizard-item{display:flex;align-items:center;flex:1 1 0;min-width:0}
+.wizard-item:last-child{flex:0 0 auto}
+.wizard-step{display:flex;align-items:center;gap:10px;min-width:0;background:none;border:0;padding:0;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer}
+.wizard-step-number{display:inline-grid;place-items:center;flex:none;min-width:34px;height:34px;padding:0 7px;border:1px solid var(--line);font:600 12px var(--font-mono);letter-spacing:.04em;color:var(--muted);font-variant-numeric:tabular-nums}
+.wizard-step-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wizard-step:disabled{cursor:not-allowed}
+.wizard-connector{position:relative;flex:1 1 auto;min-width:14px;height:1px;margin:0 12px;background:var(--line)}
+.wizard-connector-fill{position:absolute;inset:0;background:var(--gold);transform:scaleX(0);transform-origin:left center;transition:transform .3s ease}
+.wizard-item.active .wizard-step{color:var(--gold2)}
+.wizard-item.active .wizard-step-number{border-color:var(--gold);background:var(--gold);color:#0d1319}
+.wizard-item.done .wizard-step-number{border-color:var(--gold);color:var(--gold2)}
+.wizard-item.done .wizard-connector-fill{transform:scaleX(1)}
+.wizard-mobile-status,.wizard-progress-mobile{display:none;margin:0}
+.wizard-actions-total{display:none}
+
+/* Booking layout.
+   `.fr` tracks default to minmax(auto,1fr), so the seat card's min-content width
+   was able to blow the grid past .shell and push the whole page sideways - the
+   "card hugging the left edge" symptom. Explicit minmax(0,...) plus min-width:0
+   on the children keeps the columns honest, and the seat column gets the larger
+   share because the map is the widest thing on the step. */
+.seats-layout,.showtime-layout,.addon-layout,.summary-layout{grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:32px}
+.seats-layout>*,.showtime-layout>*,.addon-layout>*,.summary-layout>*{min-width:0}
+.seats-layout>.order-card,.addon-layout>.order-card,.showtime-layout>.order-card{align-self:start}
+/* Stack below 1024px. The two-column rule above is unconditional, so it would
+   otherwise beat the original mobile single-column rule on source order alone -
+   and at tablet widths the map needs ~400px, more than a .75fr column offers. */
+@media(max-width:1023px){.seats-layout,.showtime-layout,.addon-layout,.summary-layout{grid-template-columns:minmax(0,1fr)}}
+@media(min-width:1024px){.order-card{position:sticky;top:88px}}
+
+/* Seat map.
+   The row grid declared `18px repeat(var(--seat-cols),1fr)` while the markup
+   rendered two `.row-label`s, so the second label had no track and wrapped onto
+   an implicit row. The label is now rendered once, seat sizes come from
+   variables so SCREEN and the grid share one column template, and the block is
+   centred instead of hugging the panel edge. */
+.seat-picker{display:grid;min-width:0;--seat-size:32px;--seat-gap:6px;--row-label:20px}
+.seat-picker.vip{--seat-size:34px;--seat-gap:12px}
+.seat-map-scroll{display:grid;justify-content:safe center;min-width:0;overflow-x:auto}
+.seat-row,.screen-row{display:grid;grid-template-columns:var(--row-label) repeat(var(--seat-cols,10),var(--seat-size));gap:var(--seat-gap);justify-content:center}
+/* The earlier VIP rules were scoped to `.seat-map.vip .seat-row` and
+   `.seat-map.vip .seat`, which outrank the shared column template above. Left
+   alone they re-introduce `1fr` seat tracks and a 14px gap for VIP rows while
+   SCREEN keeps the variable values, so the two drift apart. Re-assert with
+   enough specificity to win. */
+.seat-picker .seat-map .seat-row,
+.seat-picker .seat-map.vip .seat-row{grid-template-columns:var(--row-label) repeat(var(--seat-cols,10),var(--seat-size));gap:var(--seat-gap)}
+.seat-picker .seat-map .seat,
+.seat-picker .seat-map.vip .seat{width:var(--seat-size);height:var(--seat-size)}
+.screen-row{margin:30px 0 24px}
+.screen-row .screen{grid-column:1/-1;justify-self:stretch;width:100%;margin:0}
+.seat-map{justify-content:center;min-width:0}
+.seat-map .seat{width:var(--seat-size);height:var(--seat-size);font-size:12px}
+.seat-picker.vip .seat-map{gap:18px;padding-inline:0}
+.seat-picker.vip .seat{border-radius:0}
+.seat-toolbar{display:flex;align-items:center;gap:12px 20px;flex-wrap:wrap;margin:0 0 18px}
+.seat-legend{gap:16px}
+.seat-quickpick{margin-left:auto}
+
+/* Film cards.
+   `.movie-info` pulls itself up over the poster with a negative margin, so the
+   absolutely positioned trailer button (bottom of the poster) and the release
+   chip landed on top of the title. Both are in-flow inside the info block now.
+   The strip arrows were at left/right:-16px, i.e. outside the container, so
+   they were clipped on narrow viewports. */
+.movie-card-meta{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:8px}
+.movie-info .movie-releases{position:static;display:inline-block;margin-top:6px}
+.movie-info .trailer-button{position:static;margin-top:8px}
+.movie-strip .trailer-button{position:static;right:auto;bottom:auto;padding:7px 10px;font-size:11px}
+.movie-strip .movie-releases{position:static;left:auto;bottom:auto;padding:4px 7px;font-size:11px}
+.movie-strip-arrow.prev{left:6px}
+.movie-strip-arrow.next{right:6px}
+
+/* Filter bar. Native selects had appearance left alone, so they rendered a
+   light dropdown popup over the dark theme and sat at a different height from
+   the search field and the Strip/Grid switch. */
+.browse-filters{align-items:center;gap:12px}
+.browse-select{display:block;min-width:0}
+.browse-select select{
+  -webkit-appearance:none;appearance:none;
+  width:100%;min-width:0;min-height:var(--tap-min);
+  background:#0e161f url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2398a3ac' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right 12px center;
+  background-size:14px 14px;
+  border:1px solid var(--line);padding:11px 38px 11px 14px;color:var(--ink);font-size:14px;cursor:pointer;
+}
+.browse-select select:focus{border-color:var(--gold);outline:0}
+.browse-select option{background:var(--panel);color:var(--ink)}
+.browse-search input,.browse-select select,.browse-layout button{min-height:var(--tap-min)}
+.browse-layout button{padding:11px 15px;font-size:13px}
+.browse-clear{min-height:var(--tap-min)}
+
+/* Admin hall cards.
+   minmax(150px,1fr) squeezed seven cards into one row, so the nowrap REGULAR
+   badge overran the card and "Auditorium 1" wrapped. The status <select> also
+   had no min-width:0, letting it spill under the next card. */
+.auditorium-grid{grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
+.auditorium-card{gap:12px;align-content:start}
+.auditorium-card-head{flex-wrap:wrap;min-width:0}
+.auditorium-card-head h3{flex:1 1 auto;min-width:0;font-size:19px}
+.type-badge{flex:none;align-self:flex-start}
+.status-line{min-width:0}
+.status-line .field{flex:1 1 auto;min-width:0}
+.status-line select{width:100%;min-width:0;max-width:100%;min-height:40px;padding:9px 10px;background:#0e161f;border:1px solid var(--line);color:var(--ink)}
+.status-line select option{background:var(--panel);color:var(--ink)}
+.status-save{justify-content:center;gap:0}
+.manage-seats{margin-top:auto;padding-top:4px}
+
+/* Admin add-on cards.
+   `.addon-admin-actions` is a flex child with the default shrink of 1, so it was
+   squeezed below its own "Edit"/"Remove" width while those buttons are
+   nowrap - the overflow painted straight over the title and combo chip. The
+   combo chip used width:max-content, which refuses to wrap. */
+.addon-admin-grid{grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.addon-admin-card{display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:14px;align-items:start}
+.addon-admin-icon{display:grid;place-items:center;width:52px;height:52px;font-size:26px;line-height:1;background:var(--panel);border:1px solid var(--line)}
+.addon-admin-body{gap:6px}
+.addon-admin-combo{width:auto;max-width:100%;white-space:normal;overflow-wrap:anywhere}
+.addon-admin-actions{display:grid;gap:8px;flex:none;justify-items:stretch}
+.addon-admin-actions .button{white-space:nowrap;justify-content:center;gap:0;min-width:88px;padding:11px 14px}
+
+/* Shell gutters and focus visibility. */
+.shell{width:min(1180px,calc(100% - var(--shell-gutter)))}
+:where(a,button,input,select,textarea,summary,[tabindex]):focus-visible{outline:2px solid var(--gold2);outline-offset:2px}
+@media(max-width:639px){
+  .shell{width:calc(100% - var(--shell-gutter))}
+  .wizard{margin-bottom:10px}
+  .wizard-step{flex-direction:column;gap:5px}
+  .wizard-step-label{display:none}
+  .wizard-connector{margin:0 8px}
+  .wizard-mobile-status{display:block;margin:0 0 8px;color:var(--muted);font-size:13px}
+  .wizard-mobile-status b{color:var(--gold2)}
+  .wizard-progress-mobile{display:block;height:3px;margin:0 0 22px;background:var(--line)}
+  .wizard-progress-mobile>span{display:block;height:100%;background:var(--gold);transition:width .3s ease}
+  /* Sticky total + Continue so the running order stays visible while picking. */
+  .wizard-actions{position:sticky;bottom:0;z-index:20;margin-top:20px;padding:12px 0 calc(12px + env(safe-area-inset-bottom));background:var(--panel);border-top:1px solid var(--line)}
+  .wizard-actions-total{display:grid;gap:1px;text-align:center}
+  .wizard-actions-total small{color:var(--muted);font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+  .wizard-actions-total b{color:var(--gold2);font-size:18px}
+  .seat-toolbar{gap:12px}
+  .seat-legend,.seat-quickpick{margin-left:0;width:100%}
+}
+@media(max-width:700px){
+  /* One scroll container for SCREEN + rows so the two stay registered. */
+  .seat-picker{--seat-size:44px;--seat-gap:6px;--row-label:20px}
+  .seat-picker.vip{--seat-size:44px;--seat-gap:6px}
+  .seat-row,.screen-row{width:max-content;justify-content:start}
+  .seat-scroll-hint{display:block;margin:14px 0 0;color:var(--muted);font-size:12px;text-align:center}
+  .addon-admin-card{grid-template-columns:minmax(0,1fr)}
+  .addon-admin-icon{width:100%;height:auto;padding:10px;font-size:24px}
+  .addon-admin-actions{display:flex;justify-content:flex-end}
+  .addon-admin-actions .button{flex:1 1 0}
+}

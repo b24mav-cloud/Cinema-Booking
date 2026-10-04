@@ -169,13 +169,15 @@ export function MovieBrowser({ movies, activeTab, onTabChange, selectedId, onSel
             <div className="movie-poster" style={{ backgroundImage: `url('${item.posterUrl}')` }}>
               <span className="experience">{item.experience ?? "Standard"}</span>
               {user && <button type="button" className={`heart-button${saved ? " on" : ""}`} aria-label={saved ? `Remove ${item.title} from watchlist` : `Save ${item.title} to watchlist`} aria-pressed={saved} onClick={event => toggleWatch(event, item)}>{saved ? "♥" : "♡"}</button>}
-              {item.trailerUrl && <button type="button" className="trailer-button" onClick={event => { event.stopPropagation(); setTrailer({ movie: item, trigger: event.currentTarget }); }}>▶ Watch trailer</button>}
-              {activeTab === "soon" && item.releaseDate && <span className="movie-releases">Releases {new Date(item.releaseDate).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>}
             </div>
             <div className="movie-info">
               <h3><Link href={`/movies/${item.id}`} onClick={event => event.stopPropagation()}>{item.title}</Link></h3>
               <p>{item.rating ?? "PG-13"} · {Math.floor(item.durationMinutes / 60)}h {item.durationMinutes % 60}m{item.avgRating ? ` · ★ ${item.avgRating.toFixed(1)}` : ""}</p>
-              {activeTab === "showing" && bookable && <span className="movie-price">{peso(item.basePrice ?? 450)}</span>}
+              {activeTab === "soon" && item.releaseDate && <span className="movie-releases">Releases {new Date(item.releaseDate).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>}
+              <div className="movie-card-meta">
+                {activeTab === "showing" && bookable && <span className="movie-price">{peso(item.basePrice ?? 450)}</span>}
+                {item.trailerUrl && <button type="button" className="trailer-button" onClick={event => { event.stopPropagation(); setTrailer({ movie: item, trigger: event.currentTarget }); }}>▶ Watch trailer</button>}
+              </div>
             </div>
             {activeTab === "showing"
               ? bookable

@@ -100,7 +100,7 @@ export function SeatMap({ seats, selected, isVip, disabled, onToggle, onSelectSe
   };
 
   return (
-    <div className="seat-picker">
+    <div className={`seat-picker${isVip ? " vip" : ""}`} style={{ "--seat-cols": columns } as React.CSSProperties}>
       <div className="seat-toolbar">
         <div className="seat-legend" aria-hidden="true">
           <span><i className="legend-swatch available" />Available</span>
@@ -118,36 +118,37 @@ export function SeatMap({ seats, selected, isVip, disabled, onToggle, onSelectSe
         </div>
       </div>
 
-      <div className="screen" aria-hidden="true"><span>SCREEN</span></div>
+      <div className="seat-map-scroll">
+        <div className="screen-row"><div className="screen" aria-hidden="true"><span>SCREEN</span></div></div>
 
-      <div className={`seat-map ${isVip ? "vip" : "regular"}`} style={{ "--seat-cols": columns } as React.CSSProperties} ref={gridRef} role="grid" aria-label="Seat map" aria-rowcount={rows.length}>
-        {rows.map(({ row, seats: rowSeats }) => (
-          <div className="seat-row" role="row" key={row}>
-            <span className="row-label" role="rowheader">{row}</span>
-            {rowSeats.map(seat => {
-              const taken = seat.status !== "Available";
-              const isSelected = selected.includes(seat.id);
-              const state = taken ? (seat.status === "OutOfService" ? "not for sale" : "taken") : isSelected ? "selected by you" : "available";
-              return (
-                <button
-                  type="button"
-                  role="gridcell"
-                  key={seat.id}
-                  className={`seat ${seat.status.toLowerCase()}${isSelected ? " selected" : ""}${seat.variant === "recliner" ? " recliner" : ""}`}
-                  disabled={disabled || taken}
-                  aria-selected={isSelected}
-                  aria-label={`Seat ${seatCode(seat)}, ${state}`}
-                  title={`Seat ${seatCode(seat)} · ${state}`}
-                  onClick={() => onToggle(seat.id)}
-                  onKeyDown={onKeyDown}
-                >
-                  <span aria-hidden="true">{seat.number}</span>
-                </button>
-              );
-            })}
-            <span className="row-label" role="rowheader">{row}</span>
-          </div>
-        ))}
+        <div className={`seat-map ${isVip ? "vip" : "regular"}`} ref={gridRef} role="grid" aria-label="Seat map" aria-rowcount={rows.length}>
+          {rows.map(({ row, seats: rowSeats }) => (
+            <div className="seat-row" role="row" key={row}>
+              <span className="row-label" role="rowheader">{row}</span>
+              {rowSeats.map(seat => {
+                const taken = seat.status !== "Available";
+                const isSelected = selected.includes(seat.id);
+                const state = taken ? (seat.status === "OutOfService" ? "not for sale" : "taken") : isSelected ? "selected by you" : "available";
+                return (
+                  <button
+                    type="button"
+                    role="gridcell"
+                    key={seat.id}
+                    className={`seat ${seat.status.toLowerCase()}${isSelected ? " selected" : ""}${seat.variant === "recliner" ? " recliner" : ""}`}
+                    disabled={disabled || taken}
+                    aria-selected={isSelected}
+                    aria-label={`Seat ${seatCode(seat)}, ${state}`}
+                    title={`Seat ${seatCode(seat)} · ${state}`}
+                    onClick={() => onToggle(seat.id)}
+                    onKeyDown={onKeyDown}
+                  >
+                    <span aria-hidden="true">{seat.number}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </div>
       </div>
 
       <p className="seat-scroll-hint">Scroll sideways to see every seat</p>

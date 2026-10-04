@@ -101,7 +101,7 @@ const soonest = Math.min(...verify.showtimes.map(item => new Date(item.startTime
 if (soonest - Date.now() <= CANCELLATION_CUTOFF_MS) {
   console.error(
     `\nFAILED SELF-CHECK: earliest show starts in ${Math.round((soonest - Date.now()) / 60000)} minutes, ` +
-    `inside the ${CANNELLATION_CUTOFF_MS / 60000}-minute cancellation cutoff. Dev data would be uncancellable.`
+    `inside the ${CANCELLATION_CUTOFF_MS / 60000}-minute cancellation cutoff. Dev data would be uncancellable.`
   );
   process.exit(1);
 }

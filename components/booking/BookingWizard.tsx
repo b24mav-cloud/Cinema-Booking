@@ -73,23 +73,35 @@ export function BookingWizard({ flow, browseTab, onTabChange }: {
       <ol className="wizard" aria-label="Booking progress">
         {STEPS.map((label, index) => {
           const position = index + 1;
-          const state = flow.step === position ? "active" : flow.step > position ? "done" : "";
+          const state = flow.step === position ? "active" : flow.step > position ? "done" : "pending";
+          const reached = position <= flow.step;
           return (
-            <li key={label}>
+            <li key={label} className={`wizard-item ${state}`}>
               <button
                 type="button"
-                className={`wizard-step ${state}`}
+                className="wizard-step"
                 aria-current={flow.step === position ? "step" : undefined}
-                disabled={position > flow.step}
-                onClick={() => position <= flow.step && flow.goToStep(position as 1 | 2 | 3 | 4 | 5)}
+                disabled={!reached}
+                onClick={() => reached && flow.goToStep(position as 1 | 2 | 3 | 4 | 5)}
               >
-                <b>{position < 10 ? `0${position}` : position}</b>
-                <span>{label}</span>
+                <span className="wizard-step-number" aria-hidden="true">{position < 10 ? `0${position}` : position}</span>
+                <span className="wizard-step-label">{label}</span>
               </button>
+              {index < STEPS.length - 1 && (
+                <span className="wizard-connector" aria-hidden="true">
+                  <span className="wizard-connector-fill" style={{ transform: `scaleX(${flow.step > position ? 1 : 0})` }} />
+                </span>
+              )}
             </li>
           );
         })}
       </ol>
+      <p className="wizard-mobile-status">
+        <b>Step {flow.step}</b> of {STEPS.length} &middot; {STEPS[flow.step - 1]}
+      </p>
+      <p className="wizard-progress-mobile" aria-hidden="true">
+        <span style={{ width: `${(flow.step / STEPS.length) * 100}%` }} />
+      </p>
 
       {flow.error && <p className="error" role="alert">{flow.error}</p>}
       {flow.notice && <p className="notice" role="status">{flow.notice}</p>}
@@ -259,6 +271,10 @@ export function BookingWizard({ flow, browseTab, onTabChange }: {
 
       <div className="wizard-actions">
         <button className="button back-button" hidden={flow.step === 1} onClick={() => void flow.back()}>← Back</button>
+        <span className="wizard-actions-total">
+          <small>Total</small>
+          <b>{peso(flow.total)}</b>
+        </span>
         <button className="button gold-button" hidden={flow.step >= 5} onClick={() => void flow.next()}>Continue →</button>
       </div>
     </>
