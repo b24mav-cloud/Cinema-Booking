@@ -13,7 +13,7 @@ export type Notification = {
   id: string;
   userId: string;
   role: "admin" | "customer";
-  kind: "sold-out" | "now-showing" | "watchlist-sold-out";
+  kind: "sold-out" | "now-showing" | "watchlist-sold-out" | "booking-cancelled" | "movie-released";
   title: string;
   message: string;
   refId?: number;
@@ -21,6 +21,7 @@ export type Notification = {
   readAt?: string | null;
 };
 export type SeatSnapshot = { row: string; number: number; price: number };
+export type BookingStatus = "confirmed" | "pending" | "cancelled" | "refunded";
 export type Booking = {
   id: string;
   showtimeId: number;
@@ -34,7 +35,28 @@ export type Booking = {
   totalAmount: number;
   createdAt: string;
   isConfirmed: boolean;
+  status?: BookingStatus;
+  cancelledAt?: string;
+  cancelledBy?: "customer" | "admin";
+  checkedInAt?: string | null;
+  paymentReference?: string;
+  /** Scannable door code, stored so validation survives a secret rotation. */
+  ticketCode?: string;
   showtime?: ShowtimeWithMovie;
+};
+
+/**
+ * A short-lived claim on seats during checkout. Prevents two people completing
+ * the booking wizard for the same seat at the same time.
+ */
+export type SeatHold = {
+  id: string;
+  showtimeId: number;
+  seatIds: number[];
+  /** Supabase user id when signed in, otherwise the anonymous hold token. */
+  owner: string;
+  expiresAt: string;
+  createdAt: string;
 };
 export type Store = {
   branches: string[];
@@ -42,6 +64,7 @@ export type Store = {
   movies: Movie[];
   showtimes: Showtime[];
   bookings: Booking[];
+  seatHolds?: SeatHold[];
   profiles?: Record<string, CustomerProfile>;
   watchlists?: Record<string, number[]>;
   ratings?: Rating[];
@@ -50,6 +73,7 @@ export type Store = {
 };
 export type AuthUser = { id: string; email: string; role: "admin" | "customer"; metadata?: Record<string, unknown> };
 export type CustomerProfile = { name?: string; mobile?: string; paymentPrefs?: string[] };
+export type Role = "admin" | "customer";
 export type Rating = { id: string; bookingId: string; movieId: number; userId: string; stars: number; updatedAt: string };
 export type Dashboard = {
   moviesCurrentlyShowing: number;

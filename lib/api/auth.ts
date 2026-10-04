@@ -1,7 +1,7 @@
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { NextApiRequest, NextApiResponse } from "next";
-import type { AuthUser } from "../types";
+import type { AuthUser, Role } from "../types";
 
 type SessionPayload = { access_token: string; refresh_token: string };
 
@@ -30,7 +30,7 @@ export function getAdminClient() {
 const cookieName = "cinema_session";
 
 // Shorter idle timeout for admins, who can modify cinema data.
-const SESSION_IDLE_SECONDS: Record<"admin" | "customer", number> = {
+const SESSION_IDLE_SECONDS: Record<Role, number> = {
   admin: 20 * 60,
   customer: 30 * 24 * 60 * 60
 };
@@ -53,12 +53,18 @@ export const clearSession = (res: NextApiResponse) => {
   res.setHeader("Set-Cookie", `${cookieName}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`);
 };
 
-export const setSession = (res: NextApiResponse, session: { access_token: string; refresh_token: string; expires_in?: number }, role: "admin" | "customer" = "customer") => {
+export const setSession = (res: NextApiResponse, session: { access_token: string; refresh_token: string; expires_in?: number }, role: Role = "customer") => {
   res.setHeader("Set-Cookie", `${cookieName}=${sessionCookie(session)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${SESSION_IDLE_SECONDS[role]}`);
 };
 
-const roleOf = (user: { app_metadata?: Record<string, unknown> | null; user_metadata?: Record<string, unknown> | null }): "admin" | "customer" =>
-  user.app_metadata?.role === "admin" || user.user_metadata?.role === "admin" ? "admin" : "customer";
+/**
+ * Only `app_metadata` is trustworthy — it is writable solely by the service
+ * role. `user_metadata` can be edited by the account owner through the
+ * Supabase client, so honouring a role from there would let any signed-in
+ * customer promote themselves to admin.
+ */
+export const roleOf = (user: { app_metadata?: Record<string, unknown> | null }): Role =>
+  user.app_metadata?.role === "admin" ? "admin" : "customer";
 
 export const getSessionUser = async (req: NextApiRequest, res: NextApiResponse): Promise<AuthUser | null> => {
   const client = getSupabase();
@@ -96,7 +102,7 @@ export const getSessionUser = async (req: NextApiRequest, res: NextApiResponse):
 export const requireUser = async (
   req: NextApiRequest,
   res: NextApiResponse,
-  role?: "admin" | "customer"
+  role?: Role
 ): Promise<{ error: string; status: number; user?: undefined } | { user: AuthUser; error?: undefined; status?: undefined }> => {
   const user = await getSessionUser(req, res);
   if (!user) return { error: "Authentication required.", status: 401 };

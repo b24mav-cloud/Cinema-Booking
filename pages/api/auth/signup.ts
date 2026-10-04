@@ -36,7 +36,7 @@ export default wrap(async (req: NextApiRequest, res: NextApiResponse) => {
       return json(res, 409, { error: "An account with that email already exists." });
     }
     console.error("Supabase sign-up failed:", created.error.message);
-    return json(res, 502, "We couldn't create your account right now. Please try again.");
+    return json(res, 502, { error: "We couldn't create your account right now. Please try again." });
   }
   const auto = await client.auth.signInWithPassword({ email, password });
   if (auto.error || !auto.data.session) {

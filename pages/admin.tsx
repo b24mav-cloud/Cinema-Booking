@@ -275,6 +275,11 @@ export default function Admin() {
   return <><Head><title>Admin dashboard | CinemaBooking</title></Head><SiteHeader admin /><main className="admin-page shell"><div className="d-flex justify-content-between"><div><p className="kicker">ADMIN PORTAL</p><h1>{greeting}.</h1></div><button className="button" onClick={signOut}>Sign out</button></div><p className="muted">A quick view of the cinema today.</p>
     <section className="admin-stats today-stats">{todayCards?.map(([label, value]) => <article className="summary-card" key={String(label)}><span className="muted">{label}</span><strong>{value}</strong></article>)}</section>
     <p className="cinema-line muted">{cinemaLine?.join(" · ")}</p>
+    <nav className="admin-nav" aria-label="Admin sections">
+      <Link className="button gold-button" href="/admin/checkin">Ticket check-in</Link>
+      <Link className="button" href="/admin/reports">Reports</Link>
+      <Link className="button back-button" href="/admin/auditorium/1">Seat maps</Link>
+    </nav>
     {occupancySection}
     {auditoriumGrid}
     <section className="summary-card admin-placeholder"><div className="section-heading"><div><p className="kicker">MOVIES</p><h2>Movie records</h2></div><div className="admin-actions"><select value={filter} onChange={e => setFilter(e.target.value)}><option value="">All statuses</option><option value="now showing">Now showing</option><option value="coming soon">Coming soon</option><option value="archived">Archived</option></select><button className="button gold-button" onClick={startNew}>+ Add movie</button></div></div>
