@@ -1,116 +1,98 @@
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Seat } from "../../lib/types";
+import { peso } from "../../lib/types";
 import { MAX_SEATS } from "../../lib/useBookingFlow";
+import { buildSeatLayout, seatCode, suggestSeats } from "../../lib/seatLayout";
+import { SeatGrid } from "./SeatGrid";
 
 type Props = {
   seats: Seat[];
   selected: number[];
   isVip: boolean;
   disabled?: boolean;
+  auditoriumName?: string;
   onToggle: (seatId: number) => void;
   onSelectSeats: (seatIds: number[]) => void;
+  onContinue: () => void;
 };
 
-const seatCode = (seat: Seat) => `${seat.row}${seat.number}`;
+const QUICK_PICK_COUNTS = [1, 2, 3, 4];
 
 /**
- * Picks the run of free seats closest to the middle of the auditorium so the
- * "best available" shortcut matches what a regular cinema would offer.
+ * The screen arc is drawn to the measured width of the seat block rather than to
+ * a percentage, because `preserveAspectRatio="none"` would otherwise stretch the
+ * curve and thin the stroke. `non-scaling-stroke` keeps it 4px even in the first
+ * frame, before the measurement lands.
  */
-function suggest(seats: Seat[], count: number): number[] {
-  const rows = [...new Set(seats.map(seat => seat.row))].sort();
-  if (!rows.length || count < 1) return [];
-  const middleRow = rows[Math.floor(rows.length / 2)];
-  const ordered = [...rows].sort((a, b) => Math.abs(a.charCodeAt(0) - middleRow.charCodeAt(0)) - Math.abs(b.charCodeAt(0) - middleRow.charCodeAt(0)));
+const SCREEN_ARC_HEIGHT = 26;
 
-  let best: { ids: number[]; distance: number } | null = null;
-  for (const row of ordered) {
-    const free = seats.filter(seat => seat.row === row && seat.status === "Available").sort((a, b) => a.number - b.number);
-    let run: Seat[] = [];
-    const runs: Seat[][] = [];
-    for (const seat of free) {
-      if (run.length && seat.number !== run[run.length - 1].number + 1) {
-        runs.push(run);
-        run = [];
-      }
-      run.push(seat);
-    }
-    if (run.length) runs.push(run);
-    for (const candidate of runs) {
-      if (candidate.length < count) continue;
-      const window = candidate.slice(0, count);
-      const centreOffset = Math.abs(window[0].number + count / 2 - (free[0].number + free.length / 2));
-      const distance = ordered.indexOf(row) * 10 + centreOffset;
-      if (!best || distance < best.distance) best = { ids: window.map(seat => seat.id), distance };
-    }
-  }
-  return best?.ids ?? [];
-}
+export function SeatMap({ seats, selected, isVip, disabled, auditoriumName, onToggle, onSelectSeats, onContinue }: Props) {
+  const layout = useMemo(() => buildSeatLayout(seats, isVip ? "vip" : "regular"), [seats, isVip]);
 
-export function SeatMap({ seats, selected, isVip, disabled, onToggle, onSelectSeats }: Props) {
-  const gridRef = useRef<HTMLDivElement>(null);
-  const rows = useMemo(() => {
-    const grouped = new Map<string, Seat[]>();
-    for (const seat of seats) {
-      const list = grouped.get(seat.row) ?? [];
-      list.push(seat);
-      grouped.set(seat.row, list);
-    }
-    return [...grouped.entries()]
-      .sort((a, b) => a[0].localeCompare(b[0]))
-      .map(([row, list]) => ({ row, seats: [...list].sort((a, b) => a.number - b.number) }));
-  }, [seats]);
+  const selectedSet = useMemo(() => new Set(selected), [selected]);
+  const chosenSeats = useMemo(() => seats.filter(seat => selectedSet.has(seat.id)), [seats, selectedSet]);
+  const total = chosenSeats.reduce((sum, seat) => sum + seat.price, 0);
 
-  const freeByRow = rows.map(({ row, seats: list }) => ({ row, count: list.filter(seat => seat.status === "Available").length }));
+  const [quickMessage, setQuickMessage] = useState("");
+  const [blockWidth, setBlockWidth] = useState(0);
+  const [overflows, setOverflows] = useState(false);
 
-  // The widest row decides the grid, so a 6-wide auditorium does not inherit the
-  // 10 columns the stylesheet used to assume and end up with four dead tracks.
-  const columns = Math.max(1, ...rows.map(({ seats: list }) => list.length));
+  const blockRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  /**
-   * Resolves the quick-pick request here, where the suggestion is computed, and
-   * hands the concrete seat ids upward. Previously this only asked "is there a
-   * suggestion?" and let the caller pick independently, so the check and the
-   * selection could disagree.
-   */
+  // Measure after render: the screen must span the seat block, and the block's
+  // width depends on the data, the breakpoint and the font metrics.
+  useEffect(() => {
+    const block = blockRef.current;
+    const scroll = scrollRef.current;
+    if (!block || !scroll) return;
+    const update = () => {
+      setBlockWidth(Math.round(block.getBoundingClientRect().width));
+      setOverflows(scroll.scrollWidth > scroll.clientWidth + 1);
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(block);
+    observer.observe(scroll);
+    return () => observer.disconnect();
+  }, [layout]);
+
   const runSuggestion = (count: number) => {
-    const ids = suggest(seats, count);
-    if (ids.length) onSelectSeats(ids);
+    const ids = suggestSeats(layout, count);
+    if (!ids) {
+      // A VIP pair is sold whole, so an odd count above one can never be filled
+      // by quick pick. Say that rather than reporting a generic shortage.
+      setQuickMessage(
+        isVip && count > 1 && count % 2 === 1
+          ? "VIP recliners are sold as pairs. Quick pick 2 or 4, or choose individual recliners."
+          : `No run of ${count} adjacent ${count === 1 ? "seat is" : "seats are"} free in one section. Try fewer, or pick them yourself.`
+      );
+      return;
+    }
+    setQuickMessage("");
+    onSelectSeats(ids);
   };
 
-  /** Arrow keys move between seats the way a seat map should behave. */
-  const onKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
-    const keys = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"];
-    if (!keys.includes(event.key)) return;
-    const button = event.currentTarget;
-    const all = Array.from(gridRef.current?.querySelectorAll<HTMLButtonElement>("button.seat:not(:disabled)") ?? []);
-    const index = all.indexOf(button);
-    if (index < 0) return;
-    const perRow = rows[0]?.seats.length ?? 1;
-    const target =
-      event.key === "ArrowLeft" ? index - 1
-      : event.key === "ArrowRight" ? index + 1
-      : event.key === "ArrowUp" ? index - perRow
-      : event.key === "ArrowDown" ? index + perRow
-      : event.key === "Home" ? 0
-      : all.length - 1;
-    if (target < 0 || target >= all.length) return;
-    event.preventDefault();
-    all[target].focus();
+  const selectPair = (ids: number[]) => {
+    setQuickMessage("");
+    onSelectSeats(ids);
   };
+
+  const atLimit = selected.length >= MAX_SEATS;
+  const chosen = chosenSeats.map(seatCode);
 
   return (
-    <div className={`seat-picker${isVip ? " vip" : ""}`} style={{ "--seat-cols": columns } as React.CSSProperties}>
-      <div className="seat-toolbar">
-        <div className="seat-legend" aria-hidden="true">
-          <span><i className="legend-swatch available" />Available</span>
-          <span><i className="legend-swatch selected" />Your seats</span>
-          <span><i className="legend-swatch reserved" />Taken</span>
-          {isVip && <span><i className="legend-swatch recliner" />Recliner</span>}
-        </div>
+    <div className={`seat-picker${isVip ? " vip" : ""}`}>
+      <div className="seat-picker-toolbar">
+        <ul className="seat-legend">
+          <li><span className="legend-swatch legend-available" aria-hidden="true" />Available</li>
+          <li><span className="legend-swatch legend-selected" aria-hidden="true" />Your seats</li>
+          <li><span className="legend-swatch legend-taken" aria-hidden="true" />Taken</li>
+          {isVip ? <li><span className="legend-swatch legend-pair" aria-hidden="true" />Recliner pair</li> : null}
+        </ul>
         <div className="seat-quickpick">
-          <span className="muted">Quick pick</span>
-          {[1, 2, 3, 4].map(count => (
+          <span className="seat-quickpick-label">Quick pick</span>
+          {QUICK_PICK_COUNTS.map(count => (
             <button type="button" key={count} className="chip-button" disabled={disabled} onClick={() => runSuggestion(count)}>
               {count} {count === 1 ? "seat" : "seats"}
             </button>
@@ -118,46 +100,75 @@ export function SeatMap({ seats, selected, isVip, disabled, onToggle, onSelectSe
         </div>
       </div>
 
-      <div className="seat-map-scroll">
-        <div className="screen-row"><div className="screen" aria-hidden="true"><span>SCREEN</span></div></div>
+      <p className="seat-quickpick-message" role="status" aria-live="polite">
+        {quickMessage}
+      </p>
 
-        <div className={`seat-map ${isVip ? "vip" : "regular"}`} ref={gridRef} role="grid" aria-label="Seat map" aria-rowcount={rows.length}>
-          {rows.map(({ row, seats: rowSeats }) => (
-            <div className="seat-row" role="row" key={row}>
-              <span className="row-label" role="rowheader">{row}</span>
-              {rowSeats.map(seat => {
-                const taken = seat.status !== "Available";
-                const isSelected = selected.includes(seat.id);
-                const state = taken ? (seat.status === "OutOfService" ? "not for sale" : "taken") : isSelected ? "selected by you" : "available";
-                return (
-                  <button
-                    type="button"
-                    role="gridcell"
-                    key={seat.id}
-                    className={`seat ${seat.status.toLowerCase()}${isSelected ? " selected" : ""}${seat.variant === "recliner" ? " recliner" : ""}`}
-                    disabled={disabled || taken}
-                    aria-selected={isSelected}
-                    aria-label={`Seat ${seatCode(seat)}, ${state}`}
-                    title={`Seat ${seatCode(seat)} · ${state}`}
-                    onClick={() => onToggle(seat.id)}
-                    onKeyDown={onKeyDown}
-                  >
-                    <span aria-hidden="true">{seat.number}</span>
-                  </button>
-                );
-              })}
-            </div>
+      <div className="seat-map-scroll" ref={scrollRef}>
+        <div className="seat-screen">
+          <svg
+            className="seat-screen-curve"
+            width={blockWidth || undefined}
+            height={SCREEN_ARC_HEIGHT}
+            viewBox={`0 0 ${blockWidth || 320} ${SCREEN_ARC_HEIGHT}`}
+            preserveAspectRatio="none"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path
+              d={`M0 3 Q ${(blockWidth || 320) / 2} ${SCREEN_ARC_HEIGHT} ${blockWidth || 320} 3`}
+              vectorEffect="non-scaling-stroke"
+            />
+          </svg>
+          <span className="seat-screen-label">Screen</span>
+        </div>
+
+        {/* Section labels mirror the row template exactly, so each label spans
+            its own section and the two stay registered as columns resize. */}
+        <div className="seat-section-head" aria-hidden="true">
+          <span className="seat-row-letter" />
+          {layout.sections.map((section, index) => (
+            <span className="seat-section-slot" key={section.id}>
+              <span className="seat-section-label">{section.label}</span>
+              {index < layout.sections.length - 1 ? <span className="seat-aisle" /> : null}
+            </span>
           ))}
+          <span className="seat-row-letter" />
+          <span className="seat-row-letter seat-row-letter-end" />
+        </div>
+
+        <div className="seat-block" ref={blockRef}>
+          <SeatGrid
+            layout={layout}
+            selected={selected}
+            disabled={disabled}
+            onToggle={onToggle}
+            onSelectMany={isVip ? selectPair : undefined}
+          />
         </div>
       </div>
 
-      <p className="seat-scroll-hint">Scroll sideways to see every seat</p>
+      {overflows ? <p className="seat-scroll-hint">Scroll sideways to see every seat</p> : null}
 
       <p className="seat-availability" role="status" aria-live="polite">
-        {freeByRow.map(({ row, count }) => `${row}: ${count}`).join(" · ")}
+        {layout.freeSeats} of {layout.totalSeats} seats free{auditoriumName ? ` · ${auditoriumName}` : ""}
       </p>
 
-      {selected.length >= MAX_SEATS && <p className="muted seat-limit">Maximum {MAX_SEATS} seats per booking.</p>}
+      {atLimit ? <p className="seat-limit">Maximum {MAX_SEATS} seats per booking. Deselect a seat to change your selection.</p> : null}
+
+      <div className="seat-summary-bar">
+        <div className="seat-summary-bar-detail">
+          <b>{chosen.length ? chosen.join(", ") : "No seats selected"}</b>
+          <span>
+            {chosen.length
+              ? `${chosen.length} ${chosen.length === 1 ? "seat" : "seats"} · ${peso(total)}`
+              : "Pick at least one seat to continue."}
+          </span>
+        </div>
+        <button type="button" className="button gold-button seat-summary-bar-continue" disabled={disabled || !chosen.length} onClick={onContinue}>
+          Continue →
+        </button>
+      </div>
     </div>
   );
 }

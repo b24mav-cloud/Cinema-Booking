@@ -103,6 +103,8 @@ h1,h2,h3{font-family:var(--font-display),system-ui,-apple-system,"Segoe UI",Robo
 .seat-tool.active{color:var(--gold2);border-color:var(--gold)}
 .seat-summary{display:flex;gap:18px;flex-wrap:wrap;color:var(--muted);font-size:12px;font-weight:500;margin:16px 0}
 .seat-map.editor{margin:0 0 8px}
+.seat-editor-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:8px}
+.seat-map.editor .seat-row{width:max-content;gap:4px}
 .seat.outofservice{background:none;border:1px dashed var(--line);color:var(--muted);opacity:.6}
 .seat.recliner{border-color:var(--gold);color:var(--gold2)}
 .seat.reserved{cursor:not-allowed}
@@ -323,10 +325,21 @@ h1,h2,h3{font-family:var(--font-display),system-ui,-apple-system,"Segoe UI",Robo
 .occupancy-legend .legend-taken{background:var(--red);border-color:var(--red)}
 .occupancy-legend .legend-off{background:none;border:1px dashed var(--line)}
 .occupancy-body .seat-map{padding-inline:0;display:grid;gap:10px}
-.seat-map.occ-mini .seat{height:26px;width:100%;border-radius:0;cursor:default;display:grid;place-items:center}
-.seat.occ.available{background:#2f6b4f;color:#e9f5ee}
-.seat.occ.reserved{background:var(--red);color:#fff}
-.seat.occ.outofservice{background:none;border:1px dashed var(--line);color:var(--muted);opacity:.6}
+/* The mini-map renders through the shared SeatGrid, so it carries the state
+   classes (`.seat-available` / `.seat-taken` / `.seat-unavailable`) rather than
+   the old `.seat.occ.available`. It also sits outside `.seat-picker`, so the
+   customer's seat geometry does not reach it and it needs compact dimensions of
+   its own - a 162-seat hall has no room for 26px squares. */
+.occupancy-body .seat-map-status{gap:3px}
+.occupancy-body .seat-map-status .seat-row{gap:0}
+.occupancy-body .seat-map-status .seat{width:16px;height:14px;border-radius:2px;cursor:default;font-size:0}
+.occupancy-body .seat-map-status .seat-face{width:16px;height:14px;border-radius:2px;display:block}
+.occupancy-body .seat-map-status .seat-row-letter{width:14px;font-size:9px;color:var(--muted)}
+.occupancy-body .seat-map-status .seat-section{gap:2px}
+.occupancy-body .seat-map-status .seat-aisle{width:8px}
+.occupancy-body .seat-available .seat-face{background:#2f6b4f;border-color:#2f6b4f}
+.occupancy-body .seat-taken .seat-face{background:var(--red);border-color:var(--red)}
+.occupancy-body .seat-unavailable .seat-face{background:none;border:1px dashed var(--line);opacity:.6}
 .occupancy-total{margin:18px 0 0;font-size:13px}
 @media(max-width:700px){.occupancy-toggle{grid-template-columns:1fr auto;row-gap:6px}.occupancy-toggle em{grid-column:1/-1}}
 
@@ -606,17 +619,11 @@ h1,h2,h3{font-family:var(--font-display),system-ui,-apple-system,"Segoe UI",Robo
 .seat-availability{color:var(--muted);font:11px var(--font-mono),ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.04em;margin:20px 0 0;text-align:center}
 .seat-limit{text-align:center;margin:8px 0 0}
 
-/* Phone seat map. A 10-wide row at 44px needs ~550px, so on narrow screens the
-   map becomes a horizontal scroll track instead of shrinking seats to ~23px,
-   which put them well under a usable tap target. */
+/* Phone seat map: `.seat-map-scroll` is the single horizontal scroll track and
+   `.seat-summary-bar` goes sticky with safe-area padding. Both live in the
+   "Seat picker redesign" block now; the old `overflow-x` on `.seat-map` is gone
+   because it created a second, nested scroller around the rows. */
 .seat-scroll-hint{display:none}
-@media(max-width:700px){
-  .seat-map{overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:8px}
-  .seat-row{grid-template-columns:18px repeat(var(--seat-cols,10),44px);gap:6px;width:max-content}
-  .seat,.seat-map.vip .seat{width:44px;height:44px;font-size:13px}
-  .seat-map.vip{padding-inline:0}
-  .seat-scroll-hint{display:block;color:var(--muted);font-size:12px;text-align:center;margin:16px 0 0}
-}
 
 /* Wizard shell states. The skeleton pair imitates the two-column seat layout,
    with the shorter bar standing in for the order summary. */
@@ -708,34 +715,13 @@ h1,h2,h3{font-family:var(--font-display),system-ui,-apple-system,"Segoe UI",Robo
 @media(max-width:1023px){.seats-layout,.showtime-layout,.addon-layout,.summary-layout{grid-template-columns:minmax(0,1fr)}}
 @media(min-width:1024px){.order-card{position:sticky;top:88px}}
 
-/* Seat map.
-   The row grid declared `18px repeat(var(--seat-cols),1fr)` while the markup
-   rendered two `.row-label`s, so the second label had no track and wrapped onto
-   an implicit row. The label is now rendered once, seat sizes come from
-   variables so SCREEN and the grid share one column template, and the block is
-   centred instead of hugging the panel edge. */
-.seat-picker{display:grid;min-width:0;--seat-size:32px;--seat-gap:6px;--row-label:20px}
-.seat-picker.vip{--seat-size:34px;--seat-gap:12px}
-.seat-map-scroll{display:grid;justify-content:safe center;min-width:0;overflow-x:auto}
-.seat-row,.screen-row{display:grid;grid-template-columns:var(--row-label) repeat(var(--seat-cols,10),var(--seat-size));gap:var(--seat-gap);justify-content:center}
-/* The earlier VIP rules were scoped to `.seat-map.vip .seat-row` and
-   `.seat-map.vip .seat`, which outrank the shared column template above. Left
-   alone they re-introduce `1fr` seat tracks and a 14px gap for VIP rows while
-   SCREEN keeps the variable values, so the two drift apart. Re-assert with
-   enough specificity to win. */
-.seat-picker .seat-map .seat-row,
-.seat-picker .seat-map.vip .seat-row{grid-template-columns:var(--row-label) repeat(var(--seat-cols,10),var(--seat-size));gap:var(--seat-gap)}
-.seat-picker .seat-map .seat,
-.seat-picker .seat-map.vip .seat{width:var(--seat-size);height:var(--seat-size)}
-.screen-row{margin:30px 0 24px}
-.screen-row .screen{grid-column:1/-1;justify-self:stretch;width:100%;margin:0}
-.seat-map{justify-content:center;min-width:0}
-.seat-map .seat{width:var(--seat-size);height:var(--seat-size);font-size:12px}
-.seat-picker.vip .seat-map{gap:18px;padding-inline:0}
-.seat-picker.vip .seat{border-radius:0}
-.seat-toolbar{display:flex;align-items:center;gap:12px 20px;flex-wrap:wrap;margin:0 0 18px}
-.seat-legend{gap:16px}
-.seat-quickpick{margin-left:auto}
+/* Seat map layout moved to the "Seat picker redesign" block at the end of this
+   file, which is scoped to `.seat-picker` and sized with `--seat-face` /
+   `--seat-hit` / `--seat-gap`. The old rules that used `--seat-cols` and
+   `grid-template-columns` were removed rather than left to compete: they are
+   more specific than the flex row template, and the `--seat-gap` they set on
+   `.seat-picker` silently overrode the section gap from `:root`. Admin surfaces
+   keep their own `.seat-map.editor` rules below. */
 
 /* Film cards.
    `.movie-info` pulls itself up over the poster with a negative margin, so the
@@ -816,17 +802,486 @@ h1,h2,h3{font-family:var(--font-display),system-ui,-apple-system,"Segoe UI",Robo
   .wizard-actions-total{display:grid;gap:1px;text-align:center}
   .wizard-actions-total small{color:var(--muted);font-size:11px;letter-spacing:.06em;text-transform:uppercase}
   .wizard-actions-total b{color:var(--gold2);font-size:18px}
-  .seat-toolbar{gap:12px}
   .seat-legend,.seat-quickpick{margin-left:0;width:100%}
 }
 @media(max-width:700px){
-  /* One scroll container for SCREEN + rows so the two stay registered. */
-  .seat-picker{--seat-size:44px;--seat-gap:6px;--row-label:20px}
-  .seat-picker.vip{--seat-size:44px;--seat-gap:6px}
-  .seat-row,.screen-row{width:max-content;justify-content:start}
-  .seat-scroll-hint{display:block;margin:14px 0 0;color:var(--muted);font-size:12px;text-align:center}
+  /* One scroll container for the screen curve + rows so the two stay
+     registered. The customer picker sizes itself with `--seat-hit`; this keeps
+     the admin mini-map's rows from collapsing when it is narrow. */
+  .seat-row{width:max-content;justify-content:start}
   .addon-admin-card{grid-template-columns:minmax(0,1fr)}
   .addon-admin-icon{width:100%;height:auto;padding:10px;font-size:24px}
   .addon-admin-actions{display:flex;justify-content:flex-end}
   .addon-admin-actions .button{flex:1 1 0}
+}
+
+/* ===========================================================================
+   Seat picker redesign.
+
+   Everything here is scoped to `.seat-picker` (and `.seat-grid-*` for the admin
+   surfaces) on purpose. `.seat`, `.seat-row`, `.row-label`, `.seat-map` and
+   `.screen` are shared with the admin seat editor and the occupancy mini-map,
+   whose rules are defined earlier in this file and must keep working
+   unchanged. Only the token block below is global.
+
+   Layout mechanics worth knowing before editing:
+   - A row is a flex line of: row letter | (section | aisle)* | row letter.
+     Aisle lives *inside* the section slot so the gap runs the full height of the
+     map rather than only between two seats.
+   - A seat is a transparent hit area wrapping a smaller `.seat-face`. That gives
+     a 44px tap target with a 26px visual, with no absolutely positioned overlay.
+   - `.seat-map-scroll` is the only horizontal scroll container. When the map
+     fits, `justify-content: safe center` centres it and still allows scrolling
+     if it does not.
+   =========================================================================== */
+
+:root{
+  /* Seat geometry. Desktop keeps a tight 28px pitch so an 18-seat row fits the
+     seat column without scrolling; touch gets the full 44px target. */
+--seat-face:26px;
+  --seat-hit:28px;
+  /* Admin seat editor column width, shared with its inline grid template. */
+  --editor-seat-size:26px;
+  --seat-gap:4px;
+  --seat-aisle:22px;
+  --seat-aisle-vip:36px;
+  --seat-pair-gap:15px;
+  --seat-pair-inner:3px;
+  --row-letter:20px;
+  --seat-radius:6px;
+  --seat-recliner-radius:12px;
+  --seat-recliner-width:44px;
+  --seat-row-gap:6px;
+  --seat-vip-row-gap:14px;
+  --seat-foots:1;
+  --seat-take:350ms;
+  /* Colours derived from the existing theme tokens. */
+  --seat-face-available:#5d6b75;
+  --seat-face-available-text:#ecf1f2;
+  --seat-face-taken:#2c3741;
+  --seat-face-taken-text:#67727c;
+  --seat-face-unavailable:transparent;
+  --seat-hover-outline:var(--gold2);
+  --seat-selected-bg:var(--gold);
+  --seat-selected-text:#101820;
+  --seat-focus:var(--gold2);
+  --seat-label-ink:var(--muted);
+}
+
+.seat-picker{
+  display:grid;
+  min-width:0;
+  gap:0;
+}
+
+/* ---- Toolbar: legend on the left, quick pick on the right -------------- */
+.seat-picker-toolbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px 20px;
+  flex-wrap:wrap;
+  margin:0 0 10px;
+}
+.seat-legend{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px 18px;
+  margin:0;
+  padding:0;
+  list-style:none;
+  color:var(--muted);
+  font-size:12px;
+}
+.seat-legend li{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+}
+.legend-swatch{
+  display:inline-block;
+  width:12px;
+  height:12px;
+  flex:none;
+  border-radius:3px;
+}
+.legend-available{background:var(--seat-face-available)}
+.legend-selected{background:var(--seat-selected-bg)}
+.legend-taken{background:var(--seat-face-taken)}
+.legend-pair{background:none;border:1px solid var(--gold);border-radius:4px}
+.seat-quickpick{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.seat-quickpick-label{
+  color:var(--muted);
+  font-size:12px;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+}
+.seat-quickpick .chip-button{min-height:36px}
+.seat-quickpick-message{
+  margin:0 0 12px;
+  color:var(--gold2);
+  font-size:12px;
+  min-height:0;
+}
+.seat-quickpick-message:empty{margin:0}
+
+/* ---- Scroll container, screen, section labels -------------------------- */
+.seat-map-scroll{
+  display:flex;
+  flex-direction:column;
+  min-width:0;
+  overflow-x:auto;
+  overflow-y:hidden;
+  justify-content:safe center;
+  scrollbar-width:thin;
+  -webkit-overflow-scrolling:touch;
+}
+.seat-screen{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:4px;
+  padding:2px 0 14px;
+  flex:none;
+  /* Sizing is driven by the JS measurement below so the arc matches the seat
+     block exactly; the 100% default is the pre-measure frame. */
+  width:100%;
+  max-width:100%;
+}
+.seat-screen-curve{
+  display:block;
+  width:100%;
+  height:26px;
+  overflow:visible;
+}
+.seat-screen-curve path{
+  fill:none;
+  stroke:var(--gold);
+  stroke-width:4;
+  stroke-linecap:round;
+}
+.seat-screen-label{
+  color:var(--muted);
+  font:600 10px var(--font-mono),ui-monospace,SFMono-Regular,Menlo,monospace;
+  letter-spacing:.22em;
+  text-transform:uppercase;
+}
+
+.seat-section-head{
+  display:flex;
+  align-items:flex-end;
+  gap:0;
+  flex:none;
+  margin-bottom:6px;
+}
+.seat-section-label{
+  display:block;
+  width:100%;
+  text-align:center;
+  color:var(--seat-label-ink);
+  font:600 9px var(--font-mono),ui-monospace,SFMono-Regular,Menlo,monospace;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.seat-block{display:flex;min-width:0}
+
+/* ---- Rows, sections, aisles -------------------------------------------- */
+.seat-picker .seat-map,
+.seat-picker .seat-map-regular,
+.seat-picker .seat-map-vip{
+  display:flex;
+  flex-direction:column;
+  gap:var(--seat-row-gap);
+  min-width:0;
+  padding-inline:0;
+  justify-content:flex-start;
+}
+.seat-picker.vip .seat-map{gap:var(--seat-vip-row-gap)}
+.seat-picker .seat-row{
+  display:flex;
+  align-items:center;
+  gap:0;
+  min-width:0;
+}
+.seat-picker .seat-row-letter{
+  display:grid;
+  place-items:center;
+  justify-items:start;
+  flex:none;
+  width:var(--row-letter);
+  align-self:stretch;
+  color:var(--muted);
+  font:600 11px var(--font-mono),ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+/* The trailing letter anchors the far edge of the row, so the label column
+   reads as one track from the first seat to the last once the map scrolls. */
+.seat-picker .seat-row-letter-end{justify-items:end}
+.seat-picker .seat-section-slot{
+  display:flex;
+  align-items:stretch;
+  min-width:0;
+}
+.seat-picker .seat-section{
+  display:flex;
+  align-items:center;
+  gap:var(--seat-gap);
+  min-width:0;
+}
+.seat-picker .seat-aisle{
+  flex:none;
+  width:var(--seat-aisle);
+  align-self:stretch;
+}
+.seat-picker.vip .seat-aisle{
+  width:var(--seat-aisle-vip);
+}
+
+/* The centre aisle in the VIP lounge: pairs 1-2 | pairs 3-4. */
+.seat-picker.vip .seat-section-slot:nth-child(2) .seat-aisle{
+  width:var(--seat-aisle-vip);
+}
+
+/* ---- Seat: transparent hit area + visual face --------------------------- */
+.seat-picker .seat{
+  position:static;
+  display:grid;
+  place-items:center;
+  flex:none;
+  width:var(--seat-hit);
+  height:var(--seat-hit);
+  min-width:0;
+  padding:0;
+  border:0;
+  background:none;
+  border-radius:var(--seat-radius);
+  font:inherit;
+  color:inherit;
+  cursor:pointer;
+  transition:background-color .15s ease;
+}
+.seat-picker .seat-face{
+  display:grid;
+  place-items:center;
+  position:relative;
+  width:var(--seat-face);
+  height:var(--seat-face);
+  border-radius:var(--seat-radius);
+  background:var(--seat-face-available);
+  color:var(--seat-face-available-text);
+  font:600 10px var(--font-mono),ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-variant-numeric:tabular-nums;
+  transition:background-color .15s ease,color .15s ease,box-shadow .15s ease;
+}
+.seat-picker .seat-number{line-height:1;pointer-events:none}
+
+/* Hover is an outline, not a fill: the old version painted the whole seat gold,
+   which read as already-selected. */
+.seat-picker .seat-available:hover .seat-face,
+.seat-picker .seat-selected:hover .seat-face{
+  box-shadow:0 0 0 2px var(--seat-hover-outline);
+}
+.seat-picker .seat:focus-visible{
+  outline:2px solid var(--seat-focus);
+  outline-offset:2px;
+  border-radius:var(--seat-radius);
+}
+.seat-picker .seat-available .seat-face{background:var(--seat-face-available);color:var(--seat-face-available-text)}
+.seat-picker .seat-selected .seat-face{
+  background:var(--seat-selected-bg);
+  color:var(--seat-selected-text);
+  box-shadow:0 0 0 2px #d5a45f55;
+}
+.seat-picker .seat-taken{color:var(--seat-face-taken-text)}
+.seat-picker .seat-taken .seat-face{
+  background:var(--seat-face-taken);
+  color:var(--seat-face-taken-text);
+  opacity:.55;
+  cursor:not-allowed;
+}
+.seat-picker .seat-unavailable{color:var(--muted)}
+.seat-picker .seat-unavailable .seat-face{
+  background:var(--seat-face-unavailable);
+  border:1px dashed var(--line);
+  color:var(--muted);
+  opacity:.6;
+  cursor:not-allowed;
+}
+/* A taken seat keeps its slot in the grid but is inert. */
+.seat-picker .seat[aria-disabled="true"]{cursor:not-allowed}
+
+/* ---- VIP recliner pairs ------------------------------------------------- */
+.seat-picker.vip .seat-section.is-pair{
+  position:relative;
+  gap:var(--seat-pair-inner);
+  padding:5px 6px 9px;
+  border:1px solid var(--line);
+  border-radius:var(--seat-radius);
+  background:#141d27;
+  /* A pair is one sold unit, so its two recliners sit closer together than the
+     gap between separate pairs. */
+  margin-right:calc(var(--seat-pair-gap) - var(--seat-gap));
+}
+.seat-picker.vip .seat-section.is-pair:last-child{margin-right:0}
+/* Recliner geometry keys off the seat's own class rather than `.vip`, because
+   "recliner" is a property of the seat (`Seat.variant`), not of the hall. A hall
+   that mixes variants still renders each seat correctly. */
+.seat-picker .seat-recliner{
+  width:calc(var(--seat-recliner-width) + 12px);
+  height:auto;
+}
+.seat-picker .seat-recliner .seat-face{
+  width:var(--seat-recliner-width);
+  height:auto;
+  min-height:40px;
+  padding:9px 0 12px;
+  border-radius:var(--seat-recliner-radius) var(--seat-recliner-radius) 4px 4px;
+  border:1px solid var(--line);
+  background:#33414d;
+  color:var(--seat-face-available-text);
+}
+.seat-picker .seat-available.seat-recliner .seat-face{background:#33414d}
+.seat-picker .seat-selected.seat-recliner .seat-face{
+  background:var(--seat-selected-bg);
+  border-color:var(--seat-selected-bg);
+  color:var(--seat-selected-text);
+}
+/* Small footrest bar under each recliner. */
+.seat-picker .seat-footrest{
+  position:absolute;
+  left:5px;
+  right:5px;
+  bottom:4px;
+  height:3px;
+  border-radius:2px;
+  background:currentColor;
+  opacity:.45;
+}
+.seat-picker .seat-number{position:relative;z-index:1}
+
+/* Read-only map: no pointer affordances, so nothing looks clickable. */
+.seat-map-status .seat{cursor:default}
+.seat-map-status .seat:hover .seat-face{box-shadow:none}
+/* Interactive map: the grid owns keyboard focus, so suppress the text caret
+   highlight that some engines draw on a focused button. */
+.seat-map-picker .seat{user-select:none;-webkit-user-select:none}
+
+/* "Select pair": hover-revealed. Absolutely positioned inside the relatively
+   positioned frame so revealing it cannot reflow the row mid-hover. */
+.seat-picker.vip .seat-pair-select{
+  position:absolute;
+  top:-9px;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:2;
+  padding:2px 7px;
+  border:1px solid var(--gold);
+  border-radius:999px;
+  background:var(--panel);
+  color:var(--gold2);
+  font:600 9px var(--font-mono),ui-monospace,SFMono-Regular,Menlo,monospace;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  white-space:nowrap;
+  cursor:pointer;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .15s ease;
+}
+.seat-picker.vip .seat-section.is-pair:hover .seat-pair-select,
+.seat-picker.vip .seat-section.is-pair:focus-within .seat-pair-select{
+  opacity:1;
+  pointer-events:auto;
+}
+
+/* ---- Status lines ------------------------------------------------------- */
+.seat-picker .seat-scroll-hint{
+  margin:12px 0 0;
+  color:var(--muted);
+  font-size:12px;
+  text-align:center;
+}
+.seat-picker .seat-availability{
+  margin:14px 0 0;
+  color:var(--muted);
+  font:11px var(--font-mono),ui-monospace,SFMono-Regular,Menlo,monospace;
+  letter-spacing:.04em;
+  text-align:center;
+}
+.seat-picker .seat-limit{
+  margin:10px 0 0;
+  color:var(--gold2);
+  font-size:12px;
+  text-align:center;
+}
+
+/* ---- Summary bar -------------------------------------------------------- */
+.seat-summary-bar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  margin-top:18px;
+  padding-top:16px;
+  border-top:1px solid var(--line);
+}
+.seat-summary-bar-detail{
+  display:grid;
+  gap:3px;
+  min-width:0;
+}
+.seat-summary-bar-detail b{
+  font-size:15px;
+  color:var(--ink);
+  overflow-wrap:anywhere;
+}
+.seat-summary-bar-detail span{
+  color:var(--muted);
+  font-size:12px;
+}
+.seat-summary-bar-continue{
+  flex:none;
+  white-space:nowrap;
+  justify-content:center;
+  gap:0;
+}
+
+/* ---- Breakpoints -------------------------------------------------------- */
+@media(max-width:1023px){
+  .seat-summary-bar-continue{min-width:140px}
+}
+@media(max-width:639px){
+  /* Phones get the full 44px target. An 18-seat row no longer fits, so
+     `.seat-map-scroll` becomes the single horizontal track. */
+  :root{
+    --seat-hit:44px;
+    --seat-face:26px;
+    --seat-gap:4px;
+    --seat-aisle:22px;
+    --seat-aisle-vip:36px;
+  }
+  .seat-picker .seat-card-back{width:100%;justify-content:center}
+  /* Sticky summary bar with safe-area padding, since the wizard footer bar is
+     hidden on this step. */
+  .seat-summary-bar{
+    position:sticky;
+    bottom:0;
+    z-index:20;
+    margin-top:16px;
+    padding:12px 0 calc(12px + env(safe-area-inset-bottom));
+    background:var(--panel);
+    border-top:1px solid var(--line);
+  }
+  .seat-summary-bar-continue{min-width:120px}
+}
+@media(min-width:640px) and (max-width:1023px){
+  /* Tablet: keep the tighter pitch so the row still fits one column. */
+  :root{--seat-hit:34px}
 }

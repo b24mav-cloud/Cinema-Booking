@@ -3,7 +3,9 @@ import Head from "next/head";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { SiteHeader } from "../components/SiteHeader";
+import { SeatGrid } from "../components/booking/SeatGrid";
 import { showtimeToIso } from "../lib/api/cinema";
+import { buildSeatLayout } from "../lib/seatLayout";
 import { peso, type AddOn, type Movie, type Seat, type ShowtimeDraft } from "../lib/types";
 
 type AuditoriumStatus = "Open" | "Maintenance" | "Closed";
@@ -42,6 +44,13 @@ export default function Admin() {
   const [occupancyData, setOccupancyData] = useState<OccupancyDetail | null>(null);
   const [addOns, setAddOns] = useState<AddOn[]>([]);
   const [addOnForm, setAddOnForm] = useState<AddOnForm | null>(null);
+
+  // The occupancy mini-map renders from the shared layout engine, so it picks up
+  // the hall's sections and aisles rather than showing a flat strip of seats.
+  const occupancyLayout = useMemo(
+    () => buildSeatLayout(occupancyData?.seats ?? [], occupancyData?.auditoriumType === "vip" ? "vip" : "regular"),
+    [occupancyData]
+  );
 
   const notify = (message: string) => {
     setToast(message);
@@ -262,7 +271,11 @@ export default function Admin() {
                 ? <p className="showtime-note">Loading seats…</p>
                 : <div className="occupancy-body">
                     <div className="occupancy-legend"><span><i className="legend-avail" />Available</span><span><i className="legend-taken" />Taken</span><span><i className="legend-off" />Not for sale</span></div>
-                    <div className={`seat-map occ-mini ${occupancyData.auditoriumType === "vip" ? "vip" : "regular"}`}>{Array.from(new Set(occupancyData.seats.map(s => s.row))).map(row => <div className="seat-row" key={row}><span className="row-label">{row}</span>{occupancyData.seats.filter(s => s.row === row).map(seat => <span className={`seat occ ${seat.status.toLowerCase()}`} key={seat.id}>{seat.number}</span>)}</div>)}</div>
+                    <SeatGrid
+                      layout={occupancyLayout}
+                      mode="status"
+                      showNumbers={false}
+                    />
                     <p className="occupancy-total muted">{totalSeats - bookedSeats} of {totalSeats} seats available</p>
                   </div>}
             </div>}

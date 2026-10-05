@@ -156,12 +156,20 @@ export function BookingWizard({ flow, browseTab, onTabChange }: {
               </div>
               <span className="seat-count">{flow.seats.length} selected</span>
             </div>
+            {/* The seat picker owns its own summary bar on this step, so Back
+                lives in the card header rather than in the wizard footer that
+                the bar replaces. */}
+            <button type="button" className="button back-button seat-card-back" onClick={() => void flow.back()}>
+              ← Showtimes
+            </button>
             <SeatMap
               seats={flow.showtime.seats}
               selected={flow.seats}
               isVip={flow.showtime.auditoriumType === "vip"}
+              auditoriumName={flow.showtime.auditorium}
               onToggle={flow.toggleSeat}
               onSelectSeats={ids => void flow.selectSeats(ids)}
+              onContinue={() => void flow.next()}
             />
           </div>
           {summary}
@@ -269,7 +277,10 @@ export function BookingWizard({ flow, browseTab, onTabChange }: {
         </div>
       )}
 
-      <div className="wizard-actions">
+      {/* Step 3 hides this bar entirely: the seat picker renders its own summary bar
+          with the running total and Continue, and two sticky bars on a phone
+          would fight for the bottom of the screen. */}
+      <div className="wizard-actions" hidden={flow.step === 3}>
         <button className="button back-button" hidden={flow.step === 1} onClick={() => void flow.back()}>← Back</button>
         <span className="wizard-actions-total">
           <small>Total</small>

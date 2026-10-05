@@ -235,6 +235,12 @@ export function useBookingFlow(initialMovieId?: number) {
   const selectSeats = useCallback(
     async (seatIds: number[]) => {
       if (!showtime) return;
+      // Quick-pick and the VIP pair shortcut land here too, so the limit is
+      // enforced on this path as well as in `toggleSeat`.
+      if (seatIds.length > MAX_SEATS) {
+        setError(`You can select up to ${MAX_SEATS} seats in one booking.`);
+        return;
+      }
       setSeats(seatIds);
       try {
         const result = await apiPost<{ holdId: string; expiresAt: string }>("/api/holds", {

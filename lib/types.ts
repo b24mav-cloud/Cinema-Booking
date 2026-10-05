@@ -1,7 +1,20 @@
 export type SeatStatus = "Available" | "Reserved" | "OutOfService";
-export type Seat = { id: number; row: string; number: number; price: number; status: SeatStatus; variant?: "standard" | "recliner" };
+export type Seat = { id: number; row: string; number: number; price: number; status: SeatStatus; variant?: "standard" | "recliner"; sectionId?: string };
 export type AuditoriumStatus = "Open" | "Maintenance" | "Closed";
-export type Auditorium = { id: number; name: string; type: "regular" | "vip"; status: AuditoriumStatus; seats: Seat[] };
+
+/**
+ * A group of seats within every row, rendered as its own block so an aisle can
+ * run the full height of the map between two of them.
+ *
+ * `kind: "pair"` marks a VIP recliner pair: two seats drawn inside one joined
+ * frame and selectable together. Regular sections leave `kind` unset.
+ *
+ * Optional on `Auditorium` so older records keep loading; the store derives a
+ * default from `type` whenever it is missing.
+ */
+export type SeatSection = { id: string; label: string; seatCount: number; kind?: "pair" };
+
+export type Auditorium = { id: number; name: string; type: "regular" | "vip"; status: AuditoriumStatus; seats: Seat[]; sections?: SeatSection[]; rows?: string[] };
 export type Movie = { id: number; title: string; synopsis?: string; description?: string; durationMinutes: number; posterUrl: string; rating?: string; experience?: string; tags?: string[]; basePrice?: number; status?: string; genre?: string; cast?: string; releaseDate?: string | null; trailerUrl?: string; archivedAt?: string };
 export type MovieWithShowtimes = Movie & { showtimes: Showtime[]; avgRating?: number | null; ratingCount?: number };
 export type Showtime = { id: number; movieId: number; startTime: string; endTime?: string; auditorium: string; auditoriumId?: number; auditoriumType?: "regular" | "vip"; experience?: string; price?: number; seats: Seat[] };

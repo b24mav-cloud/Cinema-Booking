@@ -1,6 +1,37 @@
 import type { Auditorium, Movie, MovieWithShowtimes, Seat, Showtime, ShowtimeWithMovie, Store } from "../types";
 import { isWellFormedUrl } from "../trailers";
 
+/**
+ * Seat ids must be unique across every hall *and* every showtime, because
+ * holds, bookings and the admin editor all address a seat by id alone. The
+ * original `ownerId * 100 + index + 1` scheme assumed fewer than 100 seats per
+ * owner; a 9x18 hall has 162, so showtime 1 (`101-262`) and showtime 2
+ * (`201-362`) overlapped and `updateUserById`-style lookups silently hit the
+ * wrong record. 1000 seats per owner keeps halls and shows disjoint.
+ */
+export const SEAT_ID_STRIDE = 1000;
+export const seatId = (ownerId: number, index: number): number => ownerId * SEAT_ID_STRIDE + index + 1;
+
+/**
+ * Physical position of a seat within its row, keyed so a seat survives a
+ * renumbering. The old `(row, number)` key meant that moving a hall from 10 to
+ * 18 seats per row silently relocated every reservation onto a different
+ * physical seat; the ordinal within the row does not move.
+ */
+function ordinalKeys(seats: Seat[]): Map<string, string> {
+  const perRow = new Map<string, Seat[]>();
+  for (const seat of seats) {
+    const list = perRow.get(seat.row) ?? [];
+    list.push(seat);
+    perRow.set(seat.row, list);
+  }
+  const keys = new Map<string, string>();
+  for (const list of perRow.values()) {
+    [...list].sort((a, b) => a.number - b.number).forEach((seat, i) => keys.set(`${seat.id}`, `${seat.row}#${i}`));
+  }
+  return keys;
+}
+
 export const showtimeToIso = (date: string, time: string): string | undefined => {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec((date ?? "").trim());
   const timeMatch = /^(\d{2}):(\d{2})$/.exec((time ?? "").trim());
@@ -42,7 +73,8 @@ export function buildShowtime(store: Store, movie: Movie, input: ShowtimeDraftIn
   const seats: Seat[] = keepSeats
     ? existing!.seats.map(seat => ({ ...seat, price, variant: seat.variant ?? (template.type === "vip" ? "recliner" : "standard") }))
     : template.seats.map((seat, i) => {
-        const next: Seat = { id: id * 100 + i + 1, row: seat.row, number: seat.number, price, status: seat.status === "OutOfService" ? "OutOfService" : "Available", variant: template.type === "vip" ? "recliner" : "standard" };
+        const next: Seat = { id: seatId(id, i), row: seat.row, number: seat.number, price, status: seat.status === "OutOfService" ? "OutOfService" : "Available", variant: template.type === "vip" ? "recliner" : "standard" };
+        if (seat.sectionId) next.sectionId = seat.sectionId;
         return next;
       });
   const showtime: Showtime = {
@@ -144,21 +176,29 @@ export const isBookable = (showtime: Showtime, store: Store): boolean =>
 
 export function syncAuditoriumSeats(store: Store, auditorium: Auditorium): number {
   let synced = 0;
+  const templateKeys = ordinalKeys(auditorium.seats);
   for (const showtime of store.showtimes) {
     if (showtime.auditorium !== auditorium.name) continue;
-    const previous = new Map(showtime.seats.map(seat => [`${seat.row}:${seat.number}`, seat]));
+    const previous = new Map<string, Seat>();
+    const previousKeys = ordinalKeys(showtime.seats);
+    for (const seat of showtime.seats) {
+      const key = previousKeys.get(String(seat.id));
+      if (key) previous.set(key, seat);
+    }
     const price = showtime.price ?? auditorium.seats[0]?.price ?? 450;
     showtime.seats = auditorium.seats.map((template, i) => {
-      const existing = previous.get(`${template.row}:${template.number}`);
-      return {
-        id: showtime.id * 100 + i + 1,
-        showtimeId: showtime.id,
+      const key = templateKeys.get(String(template.id));
+      const existing = key ? previous.get(key) : undefined;
+      const next: Seat = {
+        id: seatId(showtime.id, i),
         row: template.row,
         number: template.number,
         price: existing?.price ?? price,
         status: template.status === "OutOfService" && existing?.status !== "Reserved" ? "OutOfService" : (existing?.status ?? template.status),
         variant: template.variant
-      } as Seat;
+      };
+      if (template.sectionId) next.sectionId = template.sectionId;
+      return next;
     });
     synced += 1;
   }
@@ -207,15 +247,31 @@ export function createShowtime(store: Store, input: NewShowtimeInput): { error?:
   let seats: Seat[];
   if (template?.seats.length) {
     seats = template.seats.map((seat, i) => {
-      const next: Seat = { id: nextId * 100 + i + 1, row: seat.row, number: seat.number, price: seat.price, status: "Available", variant: seat.variant };
+      const next: Seat = { id: seatId(nextId, i), row: seat.row, number: seat.number, price: seat.price, status: "Available", variant: seat.variant };
+      if (seat.sectionId) next.sectionId = seat.sectionId;
       if (seat.status === "OutOfService") next.status = "OutOfService";
       return next;
     });
   } else {
-    const fallback = input.seats?.length
+    const vip = auditoriumType === "vip";
+    const variant = vip ? "recliner" : "standard";
+    const price = vip ? 780 : 520;
+    const declared = input.seats?.length
       ? input.seats
-      : Array.from({ length: auditoriumType === "vip" ? 12 : 30 }, (_, i) => ({ row: String.fromCharCode(65 + Math.floor(i / (auditoriumType === "vip" ? 6 : 10))), number: i % (auditoriumType === "vip" ? 6 : 10) + 1, price: auditoriumType === "vip" ? 780 : 10 }));
-    seats = fallback.map((seat, i) => ({ id: nextId * 100 + i + 1, row: seat.row, number: seat.number, price: Number(seat.price) || 10, status: "Available" }));
+      : // Full hall geometry, not just the first row: A-I of 18 for regular,
+        // A-D of 8 for VIP. The customer picker groups on `sectionId`, which
+        // `buildSeatLayout` treats as optional and falls back to one block.
+        ["ABCDEFGHI", "ABCD"][vip ? 1 : 0].split("").flatMap(row =>
+          Array.from({ length: vip ? 8 : 18 }, (_, i) => ({ row, number: i + 1, price }))
+        );
+    seats = declared.map((seat, i) => ({
+      id: seatId(nextId, i),
+      row: seat.row,
+      number: seat.number,
+      price: Number(seat.price) || price,
+      status: "Available",
+      variant
+    }));
   }
   const showtime: Showtime = {
     id: nextId,

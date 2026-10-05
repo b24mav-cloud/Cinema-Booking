@@ -1,13 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import type { AuditoriumStatus, SeatStatus } from "../../../../lib/types";
 import { readStore, writeStore } from "../../../../lib/api/store";
-import { syncAuditoriumSeats } from "../../../../lib/api/cinema";
+import { seatId, syncAuditoriumSeats } from "../../../../lib/api/cinema";
 import { requireUser } from "../../../../lib/api/auth";
 import { json, readBody, wrap } from "../../../../lib/api/respond";
 
 const STATUSES: AuditoriumStatus[] = ["Open", "Maintenance", "Closed"];
 const SEAT_STATUSES: SeatStatus[] = ["Available", "Reserved", "OutOfService"];
-const MAX_SEATS = 60;
+/** A regular hall is 9 rows of 18 = 162, so the old 60-seat cap had to go. */
+const MAX_SEATS = 400;
 
 export default wrap(async (req: NextApiRequest, res: NextApiResponse) => {
   const store = await readStore();
@@ -30,7 +31,19 @@ export default wrap(async (req: NextApiRequest, res: NextApiResponse) => {
         const row = String(seat.row ?? "").toUpperCase();
         const number = Number(seat.number);
         const status = SEAT_STATUSES.includes(seat.status as SeatStatus) ? (seat.status as SeatStatus) : "Available";
-        return { id: auditorium.id * 100 + i + 1, row, number, price: Number(seat.price) || 0, status, variant: seat.variant === "recliner" ? "recliner" as const : "standard" as const };
+        // `seatId` strides by 1000, so hall seat ids stay unique and far away
+        // from the old `hallId * 100 + i + 1` scheme, which collided at 162.
+        return {
+          id: seatId(auditorium.id, i),
+          row,
+          number,
+          price: Number(seat.price) || 0,
+          status,
+          variant: seat.variant === "recliner" ? ("recliner" as const) : ("standard" as const),
+          // Keep the section grouping the editor renders from; dropping it here
+          // would collapse a hall to one block on the next save.
+          ...(seat.sectionId ? { sectionId: String(seat.sectionId) } : {})
+        };
       });
       if (seats.some(seat => !seat.row || !Number.isInteger(seat.number) || seat.number < 1)) return json(res, 400, { error: "Seat map is malformed." });
       auditorium.seats = seats;

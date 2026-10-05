@@ -1,8 +1,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import type { AddOn, Auditorium, Movie, Seat, SeatHold, Showtime, Store } from "../types";
-import { showtimeEnd } from "./cinema";
+import type { AddOn, Auditorium, Movie, Seat, SeatHold, SeatSection, Showtime, Store } from "../types";
+import { seatId, showtimeEnd } from "./cinema";
 import { withStoreLock } from "./mutex";
 
 const DEFAULT_ADD_ONS: AddOn[] = [
@@ -22,18 +22,146 @@ const DEFAULT_AUDITORIUMS: { id: number; name: string; type: "regular" | "vip" }
   { id: 7, name: "VIP Lounge", type: "vip" }
 ];
 
-const buildTemplate = (id: number, name: string, type: "regular" | "vip"): Auditorium => {
-  const cols = type === "vip" ? 6 : 10;
-  const rows = type === "vip" ? 2 : 3;
-  const seats: Seat[] = [];
-  for (let i = 0; i < rows * cols; i++) {
-    seats.push({ id: id * 100 + i + 1, row: String.fromCharCode(65 + Math.floor(i / cols)), number: (i % cols) + 1, status: "Available", price: type === "vip" ? 780 : 520, variant: type === "vip" ? "recliner" : "standard" });
-  }
-  return { id, name, type, status: "Open", seats };
+/**
+ * Seat geometry is data, not markup: the seat picker renders whatever these
+ * describe. A regular hall is rows A-I of three sections (4 + 10 + 4 = 18); the
+ * VIP lounge is rows A-D of four joined recliner pairs (2 each = 8).
+ */
+const ROW_LETTERS: Record<"regular" | "vip", string> = { regular: "ABCDEFGHI", vip: "ABCD" };
+
+const DEFAULT_SECTIONS: Record<"regular" | "vip", SeatSection[]> = {
+  regular: [
+    { id: "left", label: "Left", seatCount: 4 },
+    { id: "middle", label: "Middle", seatCount: 10 },
+    { id: "right", label: "Right", seatCount: 4 }
+  ],
+  vip: [
+    { id: "pair-1", label: "Pair 1", seatCount: 2, kind: "pair" },
+    { id: "pair-2", label: "Pair 2", seatCount: 2, kind: "pair" },
+    { id: "pair-3", label: "Pair 3", seatCount: 2, kind: "pair" },
+    { id: "pair-4", label: "Pair 4", seatCount: 2, kind: "pair" }
+  ]
 };
 
-const seatFromTemplate = (template: Auditorium, showtimeId: number, price: number): Seat[] =>
-  template.seats.map((seat, i) => ({ id: showtimeId * 100 + i + 1, row: seat.row, number: seat.number, price, status: "Available", variant: seat.variant }));
+const SEAT_PRICE: Record<"regular" | "vip", number> = { regular: 520, vip: 780 };
+
+export const sectionsFor = (type: "regular" | "vip"): SeatSection[] => DEFAULT_SECTIONS[type].map(section => ({ ...section }));
+export const rowsFor = (type: "regular" | "vip"): string[] => ROW_LETTERS[type].split("");
+
+/**
+ * Physical seat slots in a row, in left-to-right order, numbered continuously
+ * across the whole row: a regular row runs 1-4 (left), 5-14 (middle), 15-18
+ * (right). Numbering restarts per row, so row B is also 1-18.
+ *
+ * Continuity matters beyond cosmetics. The seat's `row` + `number` pair is the
+ * key the admin seat editor and `seatCode()` use, and the ordinal remapping in
+ * `withGeometry` sorts a row by `number` to recover physical order. Both break
+ * if a number repeats within a row.
+ */
+function seatPlan(type: "regular" | "vip"): { sectionId: string; number: number }[] {
+  const plan: { sectionId: string; number: number }[] = [];
+  for (const section of sectionsFor(type)) {
+    for (let i = 0; i < section.seatCount; i++) plan.push({ sectionId: section.id, number: plan.length + 1 });
+  }
+  return plan;
+}
+
+/**
+ * Rebuilds a hall to the current geometry while keeping every seat's status and
+ * price on the *same physical seat*. Seats are matched by their ordinal within a
+ * row, not by row+number, because the move from 10 to 18 seats per row changes
+ * what numbers mean.
+ */
+function withGeometry(auditorium: Auditorium): Auditorium {
+  const type = auditorium.type;
+  const price = SEAT_PRICE[type];
+  const variant = type === "vip" ? "recliner" : "standard";
+  const plan = seatPlan(type);
+  const oldByRow = new Map<string, Seat[]>();
+  for (const seat of auditorium.seats) {
+    const list = oldByRow.get(seat.row) ?? [];
+    list.push(seat);
+    oldByRow.set(seat.row, list);
+  }
+  // Sorting by `number` recovers physical left-to-right order: numbers are
+  // continuous within a row in the current geometry, and a legacy 1-10 row is
+  // numbered the same way.
+  for (const list of oldByRow.values()) list.sort((a, b) => a.number - b.number);
+
+  let index = 0;
+  const seats: Seat[] = [];
+  for (const row of rowsFor(type)) {
+    const previousRow = oldByRow.get(row) ?? [];
+    plan.forEach((slot, ordinal) => {
+      const previous = previousRow[ordinal];
+      const next: Seat = {
+        id: seatId(auditorium.id, index++),
+        row,
+        number: slot.number,
+        price: previous?.price ?? price,
+        status: previous?.status ?? "Available",
+        variant
+      };
+      if (slot.sectionId) next.sectionId = slot.sectionId;
+      seats.push(next);
+    });
+  }
+
+  return { ...auditorium, type, seats, sections: sectionsFor(type), rows: rowsFor(type) };
+}
+
+const buildTemplate = (id: number, name: string, type: "regular" | "vip"): Auditorium => withGeometry({ id, name, type, status: "Open", seats: [] });
+
+/** Ordinal of each template seat within its own row. */
+function rowOrdinals(seats: Seat[]): Map<string, number> {
+  const counters = new Map<string, number>();
+  const ordinals = new Map<string, number>();
+  for (const seat of seats) {
+    const next = counters.get(seat.row) ?? 0;
+    counters.set(seat.row, next + 1);
+    ordinals.set(`${seat.row}:${seat.number}`, next);
+  }
+  return ordinals;
+}
+
+/**
+ * Brings a showtime's seats into line with its hall's current geometry. A seat
+ * keeps its status when the two lists line up by ordinal within the row, so
+ * widening a hall from 10 to 18 seats per row does not move anybody's
+ * reservation onto a different physical seat.
+ */
+function recutSeats(seats: Seat[], template: Seat[], showtimeId: number, price: number): { seats: Seat[]; changed: boolean } {
+  const aligned = seats.length === template.length && seats.every((seat, i) => seat.row === template[i].row && seat.number === template[i].number);
+  const previousByRow = new Map<string, Seat[]>();
+  if (!aligned) {
+    for (const seat of seats) {
+      const list = previousByRow.get(seat.row) ?? [];
+      list.push(seat);
+      previousByRow.set(seat.row, list);
+    }
+    for (const list of previousByRow.values()) list.sort((a, b) => a.number - b.number);
+  }
+  const templateOrdinals = aligned ? undefined : rowOrdinals(template);
+  const next = template.map((base, i) => {
+    const previous = aligned
+      ? seats[i]
+      : (previousByRow.get(base.row) ?? [])[templateOrdinals!.get(`${base.row}:${base.number}`) ?? 0];
+    const seat: Seat = {
+      id: seatId(showtimeId, i),
+      row: base.row,
+      number: base.number,
+      price: previous?.price ?? price,
+      status: base.status === "OutOfService" && previous?.status !== "Reserved" ? "OutOfService" : (previous?.status ?? base.status),
+      variant: base.variant ?? (base.sectionId?.startsWith("pair-") ? "recliner" : "standard")
+    };
+    if (base.sectionId) seat.sectionId = base.sectionId;
+    return seat;
+  });
+  const changed = !aligned || seats.some((seat, i) => seat.id !== next[i].id);
+  return { seats: next, changed };
+}
+
+const seatFromTemplate = (template: Auditorium, showtimeId: number, price: number): Seat[] => recutSeats([], template.seats, showtimeId, price).seats;
 
 const seed = (): Store => {
   const movies: Movie[] = [
@@ -75,23 +203,27 @@ function normalizeAuditoriums(list: unknown): { auditoriums: Auditorium[]; chang
         ? item === def.name || (def.type === "vip" && /vip/i.test(item)) || (def.type === "regular" && new RegExp(`auditorium ${def.id}\\b`, "i").test(item))
         : !!item && typeof item === "object" && (item as Auditorium).id === def.id
     );
-    if (isLegacyString(found)) {
+    if (isLegacyString(found) || !found || typeof found !== "object") {
+      // No usable record (or a bare name from the pre-auditorium format):
+      // synthesise the hall outright.
       result.push(buildTemplate(def.id, def.name, def.type));
       changed = true;
-    } else if (found && typeof found === "object") {
-      const existing = found as Auditorium;
-      const needsSeats = !Array.isArray(existing.seats) || existing.seats.length === 0;
-      const seats: Seat[] = needsSeats
-        ? buildTemplate(def.id, def.name, def.type).seats
-        : existing.seats.map(seat => seat.variant ? { ...seat } : { ...seat, variant: def.type === "vip" ? "recliner" : "standard" });
-      if (!needsSeats && seats.some((seat, i) => seat.variant !== existing.seats[i].variant)) changed = true;
-      const validStatus = existing.status === "Open" || existing.status === "Maintenance" || existing.status === "Closed";
-      if (existing.name !== def.name || existing.type !== def.type || !validStatus) changed = true;
-      result.push({ id: existing.id ?? def.id, name: def.name, type: def.type, status: validStatus ? existing.status : "Open", seats });
-    } else {
-      result.push(buildTemplate(def.id, def.name, def.type));
-      changed = true;
+      continue;
     }
+
+    const existing = found as Auditorium;
+    const validStatus = existing.status === "Open" || existing.status === "Maintenance" || existing.status === "Closed";
+    const status = validStatus ? existing.status : "Open";
+    if (existing.name !== def.name || existing.type !== def.type || !validStatus) changed = true;
+
+    // `withGeometry` re-cuts the hall to the current row/section plan and
+    // carries status and price across by ordinal, so widening a hall never
+    // teleports somebody's reservation. It reports a change by comparing the
+    // seat count, which is what actually moved.
+    const geometryChanged = existing.seats.length !== rowsFor(def.type).length * seatPlan(def.type).length;
+    const rebuilt = withGeometry({ id: def.id, name: def.name, type: def.type, status, seats: existing.seats ?? [] });
+    if (geometryChanged || existing.sections === undefined || existing.rows === undefined) changed = true;
+    result.push(rebuilt);
   }
   return { auditoriums: result, changed };
 }
@@ -169,17 +301,21 @@ export async function readStore(): Promise<Store> {
     changed ||= next.experience !== movie.experience || next.basePrice !== movie.basePrice || next.status !== movie.status;
     return next;
   });
-  memory.showtimes = memory.showtimes.map((showtime, index) => {
+  memory.showtimes = memory.showtimes.map(showtime => {
     const renamed = showtime.auditorium === "Auditorium 7 — VIP" ? "VIP Lounge" : showtime.auditorium;
     const price = showtime.price ?? (showtime.movieId === 1 ? 520 : 450);
-    const next: Showtime = { ...showtime, auditorium: renamed, auditoriumType: showtime.auditoriumType ?? (renamed.toLowerCase().includes("vip") ? "vip" : "regular"), experience: showtime.experience ?? (showtime.movieId === 1 ? "IMAX" : "Director's Cut"), price, seats: showtime.seats.map(seat => ({ ...seat, price, variant: seat.variant ?? (renamed.toLowerCase().includes("vip") ? "recliner" : "standard") })) };
+    const next: Showtime = { ...showtime, auditorium: renamed, auditoriumType: showtime.auditoriumType ?? (renamed.toLowerCase().includes("vip") ? "vip" : "regular"), experience: showtime.experience ?? (showtime.movieId === 1 ? "IMAX" : "Director's Cut"), price, seats: showtime.seats };
     const movie = live.movies.find(item => item.id === showtime.movieId);
     const template = live.auditoriums.find(item => item.name === renamed);
     const idBackfill = showtime.auditoriumId ?? template?.id;
     const endBackfill = showtime.endTime ?? (movie ? showtimeEnd(showtime.startTime, movie.durationMinutes) : showtime.startTime);
     next.auditoriumId = idBackfill;
     next.endTime = endBackfill;
-    changed ||= renamed !== showtime.auditorium || showtime.price !== price || !showtime.auditoriumType || idBackfill !== showtime.auditoriumId || endBackfill !== showtime.endTime;
+    // Re-cut against the hall so a geometry change reaches the schedule without
+    // waiting for an admin save.
+    const recut = template ? recutSeats(showtime.seats ?? [], template.seats, showtime.id, price) : null;
+    if (recut) next.seats = recut.seats;
+    changed ||= renamed !== showtime.auditorium || showtime.price !== price || !showtime.auditoriumType || idBackfill !== showtime.auditoriumId || endBackfill !== showtime.endTime || Boolean(recut?.changed);
     return next;
   });
   if (!memory.showtimes.some(showtime => showtime.auditoriumType === "vip")) {

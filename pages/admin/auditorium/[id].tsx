@@ -91,7 +91,12 @@ export default function AuditoriumEditor() {
       <div className="seat-toolbar">{[["select", "Select seats"], ["outofservice", "Out of service"], ...(auditorium.type === "vip" ? [["recliner", "Recliner"] as [Tool, string]] : [])].map(([key, label]) => <button key={key} className={`seat-tool ${tool === key ? "active" : ""}`} onClick={() => setTool(key as Tool)}>{label}</button>)}</div>
       <div className="summary-card"><p className="kicker">{auditorium.type === "vip" ? "VIP LOUNGE" : "REGULAR HALL"}</p><div className="seat-summary"><span>{counts.available} available</span><span>{counts.reserved} reserved</span><span>{counts.out} out of service</span>{auditorium.type === "vip" && <span>{counts.recliner} recliners</span>}</div>
         <div className="screen">SCREEN</div>
-        <div className="seat-map editor">{rows.map(group => <div className="seat-row" style={{ gridTemplateColumns: `18px repeat(${group.seats.length},1fr)` }} key={group.row}><span className="row-label">{group.row}</span>{group.seats.map(({ seat, index }) => <button key={seat.id} disabled={seat.status === "Reserved"} onClick={() => applyToSeat(index)} className={`seat ${seat.status.toLowerCase()}${seat.variant === "recliner" && seat.status !== "Reserved" ? " recliner" : ""}`} title={seat.status === "Reserved" ? "Reserved" : seat.status === "OutOfService" ? "Out of service" : seat.variant === "recliner" ? "Recliner" : "Available"}>{seat.number}</button>)}</div>)}</div>
+        {/* 18 seats per row no longer fits a phone, so the editor scrolls
+            sideways at a fixed seat size instead of crushing the columns to a
+            few pixels each. */}
+        <div className="seat-editor-scroll">
+          <div className="seat-map editor">{rows.map(group => <div className="seat-row" style={{ gridTemplateColumns: `18px repeat(${group.seats.length}, var(--editor-seat-size))` }} key={group.row}><span className="row-label">{group.row}</span>{group.seats.map(({ seat, index }) => <button key={seat.id} disabled={seat.status === "Reserved"} onClick={() => applyToSeat(index)} className={`seat ${seat.status.toLowerCase()}${seat.variant === "recliner" && seat.status !== "Reserved" ? " recliner" : ""}`} title={seat.status === "Reserved" ? "Reserved" : seat.status === "OutOfService" ? "Out of service" : seat.variant === "recliner" ? "Recliner" : "Available"}>{seat.number}</button>)}</div>)}</div>
+        </div>
         <div className="legend"><span><i className="available" />Available</span><span><i className="selected" />Out of service</span><span><i className="reserved" />Reserved</span>{auditorium.type === "vip" && <span><i className="recliner" />Recliner</span>}</div>
       </div>
       {notice && <p className="notice">{notice}</p>}
