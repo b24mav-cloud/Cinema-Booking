@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import type { KeyboardEvent as ReactKeyboardEvent } from "react";
+import type { CSSProperties } from "react";
 import type { MovieWithShowtimes } from "../lib/types";
+import { MzaCarousel } from "../lib/MzaCarousel";
 
 type Slide = {
   id: string;
@@ -20,28 +21,27 @@ const promoSlide = (): Slide => ({
   kind: "promo",
   kicker: "THE CINEMA, REIMAGINED",
   title: "Your night.\nYour way.",
-  tagline: "Premium screens, plush seats, and stories worth staying up for. Make your next movie night memorable.",
+  tagline:
+    "Premium screens, plush seats, and stories worth staying up for. Make your next movie night memorable.",
   image: undefined
 });
 
+function Chevron({ direction }: { direction: "left" | "right" }) {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d={direction === "left" ? "M15 18l-6-6 6-6" : "M9 18l6-6-6-6"} />
+    </svg>
+  );
+}
+
 export function HeroBanner({ onCta }: { onCta?: (tab: BannerTab) => void }) {
   const [slides, setSlides] = useState<Slide[]>([promoSlide()]);
-  const [active, setActive] = useState(0);
-  const [reduced, setReduced] = useState(false);
-  const hold = useRef(false);
-
-  useEffect(() => {
-    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReduced(media.matches);
-    const onChange = (event: MediaQueryListEvent) => setReduced(event.matches);
-    media.addEventListener("change", onChange);
-    return () => media.removeEventListener("change", onChange);
-  }, []);
+  const rootRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     fetch("/api/movies")
-      .then(async response => response.json())
+      .then(response => response.json())
       .then((movies: MovieWithShowtimes[]) => {
         if (cancelled) return;
         const showing = movies.filter(movie => movie.status === "now showing" && movie.posterUrl);
@@ -68,58 +68,52 @@ export function HeroBanner({ onCta }: { onCta?: (tab: BannerTab) => void }) {
           releaseDate: movie.releaseDate ?? null
         }));
         setSlides(next);
-        setActive(0);
       })
       .catch(() => undefined);
     return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
-    if (slides.length < 2 || reduced) return;
-    const ticker = window.setInterval(() => {
-      if (!hold.current) setActive(current => (current + 1) % slides.length);
-    }, 5000);
-    return () => window.clearInterval(ticker);
-  }, [slides.length, reduced]);
+    const root = rootRef.current;
+    if (!root || !slides.length) return;
+    const carousel = new MzaCarousel(root, { transitionMs: 900, interval: 3000 });
+    return () => carousel.destroy();
+  }, [slides]);
 
-  const go = (target: number) => {
-    if (!slides.length) return;
-    setActive(((target % slides.length) + slides.length) % slides.length);
-  };
-
-  const pause = () => { hold.current = true; };
-  const resume = () => { hold.current = false; };
-
-  const onKeyDown = (event: ReactKeyboardEvent<HTMLElement>) => {
-    if (event.key === "ArrowRight") { event.preventDefault(); go(active + 1); }
-    if (event.key === "ArrowLeft") { event.preventDefault(); go(active - 1); }
-    if (event.key === "Home") { event.preventDefault(); go(0); }
-    if (event.key === "End") { event.preventDefault(); go(slides.length - 1); }
-  };
-
-  return <section className="hero-banner" aria-label="Featured films and promotions" aria-roledescription="carousel" tabIndex={0}
-    onKeyDown={onKeyDown}
-    onMouseEnter={pause} onMouseLeave={resume}
-    onFocus={pause} onBlur={resume}
-    onPointerDown={pause} onPointerUp={resume} onPointerCancel={resume}
-  >
-    <div className="hero-banner-ambient" aria-hidden />
-    {slides.map((slide, index) => <div className={`hero-banner-slide${index === active ? " is-active" : ""}`} key={slide.id} aria-hidden={index !== active} aria-roledescription="slide">
-      {slide.image && <img className="hero-banner-bg" src={slide.image} alt="" draggable={false} loading={index > 0 ? "lazy" : undefined} />}
-      <div className="hero-banner-scrim" />
-      <div className="hero-banner-copy shell">
-        <p className="kicker">{slide.kicker}</p>
-        <h1>{slide.title.split("\n").map((line, i, lines) => <span key={i}>{line}{i < lines.length - 1 && <br />}</span>)}</h1>
-        {slide.kind === "movie" && slide.releaseDate
-          ? <p className="hero-banner-release">Releases {new Date(slide.releaseDate).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" })}</p>
-          : slide.tagline ? <p>{slide.tagline}</p> : null}
-        <button className="button gold-button hero-banner-cta" onClick={() => onCta?.(slide.status === "soon" ? "soon" : "showing")}>
-          {slide.kind === "promo" ? "Book your experience →" : slide.status === "soon" ? "View coming soon" : "Book now →"}
-        </button>
+  return (
+    <section ref={rootRef} id="mzaCarousel" className="mzaCarousel" aria-label="Featured films and promotions" aria-roledescription="carousel" tabIndex={0}>
+      <div className="mzaCarousel-ambient" aria-hidden="true" />
+      <div className="mzaCarousel-viewport">
+        <div className="mzaCarousel-track">
+          {slides.map((slide, index) => {
+            const background = slide.image ?? "/popup-cinema-bg.avif";
+            return (
+              <div className="mzaCarousel-slide" key={slide.id} data-state={index === 0 ? "active" : "rest"} role="group" aria-roledescription="slide" aria-label={`${index + 1} of ${slides.length}`}>
+                <article className="mzaCard" style={{ "--mzaCard-bg": `url("${background}")` } as CSSProperties}>
+                  <div className="mzaCard-media" aria-hidden="true" />
+                  <div className="mzaCard-scrim" aria-hidden="true" />
+                  <div className="mzaCard-body">
+                    <p className="kicker">{slide.kicker}</p>
+                    <h2 className="mzaCard-title">
+                      {slide.title.split("\n").map((line, i, lines) => <span key={i}>{line}{i < lines.length - 1 && <br />}</span>)}
+                    </h2>
+                    {slide.kind === "movie" && slide.releaseDate
+                      ? <p className="mzaCard-release">Releases {new Date(slide.releaseDate).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" })}</p>
+                      : slide.tagline ? <p className="mzaCard-tagline">{slide.tagline}</p> : null}
+                    <button type="button" className="button gold-button mzaCard-cta" onClick={() => onCta?.(slide.status === "soon" ? "soon" : "showing")}>
+                      {slide.kind === "promo" ? "Book your experience →" : slide.status === "soon" ? "View coming soon" : "Book now →"}
+                    </button>
+                  </div>
+                </article>
+              </div>
+            );
+          })}
+        </div>
       </div>
-    </div>)}
-    <button type="button" className="hero-banner-arrow prev" onClick={() => go(active - 1)} aria-label="Previous slide">←</button>
-    <button type="button" className="hero-banner-arrow next" onClick={() => go(active + 1)} aria-label="Next slide">→</button>
-    <div className="hero-banner-dots">{slides.map((slide, index) => <button key={slide.id} type="button" className={`hero-banner-dot${index === active ? " active" : ""}`} onClick={() => go(index)} aria-label={`Go to slide ${index + 1}`} aria-pressed={index === active} />)}</div>
-  </section>;
+      <button type="button" className="mzaCarousel-prev" aria-label="Previous slide"><Chevron direction="left" /></button>
+      <button type="button" className="mzaCarousel-next" aria-label="Next slide"><Chevron direction="right" /></button>
+      <div className="mzaCarousel-pagination" role="tablist" aria-label="Choose a slide" />
+      <div className="mzaCarousel-progress" aria-hidden="true"><span className="mzaCarousel-progressBar" /></div>
+    </section>
+  );
 }

@@ -95,10 +95,11 @@ auditorium mirrors it automatically: reserved seats and their prices are
 preserved, everything else follows the template. Public booking treats any
 non-`Available` seat (reserved or out of service) as unbookable.
 
-The front-page **hero carousel** is a coverflow-style gallery (now showing
-first, then coming soon). It supports drag/swipe with momentum, arrow/dot
-controls, keyboard navigation, hover-pausing autoplay, and falls back to a
-quiet crossfade with no autoplay under `prefers-reduced-motion`.
+The front-page **hero carousel** is a 3D card gallery (promo first, then now
+showing and coming soon). It supports drag/swipe with momentum, arrow/dot
+controls, keyboard navigation, a publish timer, and pointer parallax. Autoplay
+pauses on hover and focus. Under `prefers-reduced-motion` the depth, blur, and
+parallax are removed and autoplay is disabled.
 
 ## Data
 

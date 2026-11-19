@@ -128,44 +128,52 @@ h1,h2,h3{font-family:var(--font-display),system-ui,-apple-system,"Segoe UI",Robo
 .showtime-count.zero{color:var(--red)}
 @media(max-width:700px){.showtime-row{grid-template-columns:1fr 1fr}.showtime-remove{grid-column:2;justify-self:flex-end;margin-top:20px}.showtime-row .field-error{grid-column:1/-1}}
 
-/* Hero banner slider */
-.hero-banner{position:relative;height:clamp(430px,62vh,640px);overflow:hidden;background:#0b1018 url("/popup-cinema-bg.avif") center/cover no-repeat;outline:none}
-.hero-banner-ambient{position:absolute;inset:0;background:url("/popup-cinema-bg.avif") center/cover no-repeat;opacity:.5;mix-blend-mode:soft-light;filter:saturate(1.1);pointer-events:none}
-.hero-banner-ambient:after{content:"";position:absolute;inset:0;background:radial-gradient(120% 90% at 15% 0%,transparent 0%,rgba(11,16,24,.55) 78%)}
-.hero-banner:focus-visible{box-shadow:inset 0 0 0 2px var(--gold)}
-.hero-banner-slide{position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity .55s cubic-bezier(.4,0,.2,1)}
-.hero-banner-slide.is-active{opacity:1;pointer-events:auto;z-index:1}
-.hero-banner-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.hero-banner-scrim{position:absolute;inset:0;background:linear-gradient(90deg,rgba(11,16,24,.94) 0,rgba(11,16,24,.72) 38%,rgba(11,16,24,.34) 72%,rgba(11,16,24,.6) 100%),linear-gradient(0deg,rgba(11,16,24,.82),transparent 55%)}
-.hero-banner-copy{position:absolute;left:0;right:0;bottom:56px;display:grid;gap:12px;justify-items:start}
-.hero-banner-copy h1{font:700 clamp(36px,5.4vw,66px)/1.02 var(--font-display),system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;letter-spacing:-.025em;text-wrap:balance;margin:6px 0 0;text-shadow:0 2px 18px #0008}
-.hero-banner-copy p:not(.kicker){color:#c2ccd2;max-width:480px;line-height:1.6;margin:0;text-shadow:0 1px 10px #000a}
-.hero-banner-release{color:var(--gold2)!important;font:600 13px var(--font-mono),ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;text-transform:uppercase}
-.hero-banner-cta{margin-top:10px}
-.hero-banner-dots{position:absolute;left:50%;bottom:20px;transform:translateX(-50%);display:flex;gap:8px;z-index:3}
-.hero-banner-dot{width:8px;height:8px;border:0;border-radius:999px;padding:0;background:var(--muted);opacity:.5;cursor:pointer;transition:.2s}
-.hero-banner-dot.active{background:var(--gold);opacity:1;transform:scale(1.35)}
-.hero-banner-arrow{position:absolute;top:50%;transform:translateY(-50%);z-index:3;width:40px;height:40px;border:1px solid var(--line);border-radius:50%;background:rgba(18,27,38,.82);color:var(--gold2);cursor:pointer;transition:.2s;opacity:0}
-.hero-banner-arrow.prev{left:22px}
-.hero-banner-arrow.next{right:22px}
-.hero-banner-arrow:hover{color:var(--gold);border-color:var(--gold)}
-.hero-banner:hover .hero-banner-arrow,.hero-banner:focus-within .hero-banner-arrow{opacity:1}
+/* Mza carousel hero */
+.mzaCarousel{position:relative;height:clamp(430px,62vh,640px);overflow:hidden;background:var(--midnight);outline:none;isolation:isolate}
+.mzaCarousel:before{content:"";position:absolute;inset:14px;z-index:4;border:1px solid #daa52088;border-radius:.35rem;pointer-events:none}
+.mzaCarousel:focus-visible{outline:2px solid var(--gold);outline-offset:-4px}
+.mzaCarousel-ambient{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 72% 32%,#daa5202e,transparent 45%),radial-gradient(ellipse at 8% 100%,#8b000033,transparent 55%)}
+.mzaCarousel-ambient:after{content:"";position:absolute;inset:0;background:url("/popup-cinema-bg.avif") center/cover no-repeat;opacity:.16;mix-blend-mode:soft-light}
+.mzaCarousel-viewport{position:absolute;inset:0;overflow:hidden;touch-action:pan-y;perspective:1400px}
+.mzaCarousel-track{position:absolute;inset:0;transform-style:preserve-3d}
+.mzaCarousel-slide{position:absolute;top:calc((100% - var(--mzaPagH,52px))/2);left:50%;width:var(--mzaSlideW,70%);height:var(--mzaCardH,420px);margin-left:calc(var(--mzaSlideW,70%) / -2);pointer-events:none;will-change:transform,filter}
+.mzaCarousel-slide[data-state="active"]{pointer-events:auto}
+.mzaCard{position:relative;width:100%;height:100%;overflow:hidden;border:1px solid #daa52088;border-radius:.5rem;background:var(--panel) center/cover no-repeat;box-shadow:0 18px 60px #000b,inset 0 0 0 1px #daa52022}
+.mzaCard-media{position:absolute;inset:-8%;background-image:var(--mzaCard-bg,url("/popup-cinema-bg.avif"));background-position:center;background-size:cover;transform:translate3d(var(--mzaParBgX,0),var(--mzaParBgY,0),0) scale(1.06);will-change:transform}
+.mzaCard-scrim{position:absolute;inset:0;background:radial-gradient(ellipse at 78% 28%,#daa52022,transparent 45%),linear-gradient(90deg,rgba(13,13,13,.95) 0%,rgba(13,13,13,.82) 42%,rgba(13,13,13,.32) 78%,rgba(13,13,13,.6) 100%),linear-gradient(0deg,rgba(13,13,13,.86),transparent 62%)}
+.mzaCard-body{position:relative;z-index:1;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:1rem;width:min(100%,38rem);height:100%;padding:clamp(1.5rem,4vw,3.5rem);transform:translate3d(var(--mzaParX,0),var(--mzaParY,0),0);will-change:transform}
+.mzaCard-title{font-family:var(--font-display),Georgia,serif;font-size:clamp(2rem,4.2vw,3.6rem);line-height:1.05;letter-spacing:.01em;margin:0;text-shadow:0 3px 24px #000a}
+.mzaCard-tagline{color:var(--champagne);max-width:46ch;margin:0;line-height:1.6}
+.mzaCard-release{color:var(--gold2);font:600 12px var(--font-mono),ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;margin:0}
+.mzaCard-cta{margin-top:.5rem}
+.mzaCarousel-prev,.mzaCarousel-next{position:absolute;top:calc((100% - var(--mzaPagH,52px))/2);transform:translateY(-50%);z-index:6;width:44px;height:44px;display:grid;place-items:center;border:1px solid #daa52088;border-radius:50%;background:rgba(25,21,19,.88);color:var(--gold2);cursor:pointer;opacity:0;transition:opacity .22s ease,color .22s ease,border-color .22s ease,background-color .22s ease}
+.mzaCarousel-prev{left:clamp(1rem,3vw,2.25rem)}
+.mzaCarousel-next{right:clamp(1rem,3vw,2.25rem)}
+.mzaCarousel-prev:hover,.mzaCarousel-next:hover,.mzaCarousel-prev:focus-visible,.mzaCarousel-next:focus-visible{opacity:1;color:var(--gold);border-color:var(--gold);background:rgba(25,21,19,.96)}
+.mzaCarousel:hover .mzaCarousel-prev,.mzaCarousel:hover .mzaCarousel-next,.mzaCarousel:focus-within .mzaCarousel-prev,.mzaCarousel:focus-within .mzaCarousel-next{opacity:1}
+.mzaCarousel-pagination{position:absolute;left:0;right:0;bottom:24px;height:28px;display:flex;align-items:center;justify-content:center;gap:.5rem;z-index:6}
+.mzaCarousel-dot{width:9px;height:9px;padding:0;border:1px solid var(--gold);border-radius:50%;background:transparent;opacity:.6;cursor:pointer;transition:background-color .2s ease,transform .2s ease,opacity .2s ease}
+.mzaCarousel-dot:hover{opacity:1}
+.mzaCarousel-dot[aria-selected="true"]{background:var(--gold);opacity:1;transform:scale(1.25)}
+.mzaCarousel-dot:focus-visible{outline:2px solid var(--gold2);outline-offset:2px}
+.mzaCarousel-progress{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);width:min(220px,40%);height:2px;background:#daa52038;z-index:6;overflow:hidden}
+.mzaCarousel-progressBar{display:block;width:100%;height:100%;background:linear-gradient(90deg,var(--gold),var(--gold2));transform:scaleX(0);transform-origin:left center;will-change:transform}
 @media(max-width:900px){
-  .hero-banner{height:clamp(400px,70vh,560px)}
-  .hero-banner-arrow{opacity:1;width:34px;height:34px}
-  .hero-banner-arrow.prev{left:12px}
-  .hero-banner-arrow.next{right:12px}
+  .mzaCarousel{height:clamp(400px,70vh,560px)}
+  .mzaCarousel-prev,.mzaCarousel-next{opacity:1;width:38px;height:38px}
+  .mzaCarousel-prev{left:12px}
+  .mzaCarousel-next{right:12px}
 }
 @media(max-width:700px){
-  .hero-banner-copy{bottom:74px}
-  .hero-banner-copy h1{font-size:clamp(34px,11vw,52px)}
-  .hero-banner-copy p:not(.kicker){max-width:none}
-  .hero-banner-arrow{display:none}
-  .hero-banner-dots{bottom:22px}
+  .mzaCard-body{width:100%;padding:1.5rem;gap:.75rem}
+  .mzaCard-title{font-size:clamp(1.75rem,8vw,2.5rem)}
+  .mzaCarousel-prev,.mzaCarousel-next{display:none}
+  .mzaCarousel-pagination{bottom:20px}
 }
 @media(prefers-reduced-motion:reduce){
-  .hero-banner-slide{transition:opacity .35s ease}
-  .hero-banner-arrow{opacity:1}
+  .mzaCard-media,.mzaCard-body{transform:none}
+  .mzaCarousel-slide{filter:none!important;transition:none}
+  .mzaCarousel-dot,.mzaCarousel-prev,.mzaCarousel-next{transition:none}
 }
 
 /* Movie browsing tabs */
@@ -279,15 +287,6 @@ body{background:radial-gradient(ellipse at 50% -18%,#5c310c55 0,transparent 48%)
 .seat.reserved{background:#302a25;color:#8b8177}
 .trailer-scrim{z-index:300;background:#0d0d0de8}
 .trailer-dialog{border-color:var(--gold);border-radius:.5rem}
-.hero-banner{background-color:var(--midnight)}
-.hero-banner:before{content:"";position:absolute;inset:14px;z-index:2;border:1px solid #daa52088;pointer-events:none}
-.hero-banner-scrim{background:radial-gradient(ellipse at 74% 30%,#daa52024,transparent 42%),linear-gradient(90deg,rgba(13,13,13,.96) 0,rgba(13,13,13,.8) 40%,rgba(13,13,13,.28) 76%,rgba(13,13,13,.62) 100%),linear-gradient(0deg,rgba(13,13,13,.84),transparent 58%)}
-.hero-banner-copy{left:max(1.5rem,calc((100vw - 1280px)/2));right:auto;top:50%;bottom:auto;transform:translateY(-50%);width:min(38rem,52vw);gap:16px}
-.hero-banner-copy h1{font-size:clamp(2.5rem,5vw,4rem);letter-spacing:.015em;text-shadow:0 3px 24px #000a}
-.hero-banner-copy p:not(.kicker){max-width:42ch;color:#f1e7d2}
-.hero-banner-release{color:var(--gold2)!important}
-.hero-banner-arrow{background:rgba(25,21,19,.88);border-color:#daa52088}
-.hero-banner-dot.active{background:var(--gold)}
 .browse-tab.active,.dashboard-tab.active{color:var(--gold2);border-bottom-color:var(--gold)}
 .movie-strip-arrow{z-index:2;border-color:#daa52066;background:rgba(25,21,19,.92);color:var(--gold2)}
 .movie-chip,.vip-badge,.experience,.movie-releases,.trailer-button{border-radius:.35rem}
@@ -298,7 +297,6 @@ html[data-theme="light"] body{background:radial-gradient(ellipse at 50% -18%,#da
 html[data-theme="light"] .site-header{background:rgba(255,255,240,.95)}
 html[data-theme="light"] .hero{background-image:radial-gradient(ellipse at 72% 35%,#daa52030,transparent 42%),linear-gradient(90deg,#0d0d0df0 0%,#0d0d0db8 48%,#0d0d0d20),url("/popup-cinema-bg.avif")}
 @media(max-width:767px){.shell{width:calc(100% - 2rem)}.hero{min-height:36rem;margin-top:.75rem;padding:3rem 8%}.hero:after{inset:9px}.hero h1{font-size:clamp(2.5rem,11vw,3.5rem)}}
-@media(max-width:767px){.hero-banner-copy{left:1.5rem;right:1.5rem;top:auto;bottom:74px;transform:none;width:auto}.hero-banner:before{inset:8px}}
 @media(prefers-reduced-motion:reduce){.button,.movie-card,.showtime{transition:none}}
 
 /* Watchlist hearts on movie posters */
