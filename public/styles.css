@@ -223,6 +223,84 @@ h1,h2,h3{font-family:var(--font-display),system-ui,-apple-system,"Segoe UI",Robo
 .trailer-frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}
 @media(prefers-reduced-motion:reduce){.trailer-scrim{animation:none}}
 
+/* Baroque design system */
+:root{
+  color-scheme:dark;
+  --crimson:#8b0000;
+  --gold:#daa520;
+  --gold2:#f0ce78;
+  --midnight:#0d0d0d;
+  --ivory:#fffff0;
+  --purple:#4b0082;
+  --emerald:#046307;
+  --sienna:#e97451;
+  --champagne:#f7e7ce;
+  --bg:var(--midnight);
+  --panel:#191513;
+  --panel2:#241c18;
+  --ink:var(--ivory);
+  --muted:#c1b5a4;
+  --line:#614a2b;
+  --red:#e97451;
+  --font-sans:var(--font-cinzel),Georgia,serif;
+  --font-display:var(--font-cinzel),Georgia,serif;
+  --bs-primary:var(--crimson);
+  --bs-secondary:var(--gold);
+  --bs-body-bg:var(--midnight);
+  --bs-body-color:var(--ivory);
+  --bs-border-color:var(--line);
+  --bs-body-font-family:var(--font-cinzel),Georgia,serif;
+  --bs-border-radius:.5rem;
+  --bs-border-radius-sm:.5rem;
+  --bs-border-radius-lg:.5rem;
+  --bs-border-radius-xl:.5rem;
+  --bs-border-radius-xxl:.5rem
+}
+.app-root{--font-sans:var(--font-cinzel),Georgia,serif;--font-display:var(--font-cinzel),Georgia,serif;min-height:100dvh;font-family:var(--font-cinzel),Georgia,serif}
+body{background:radial-gradient(ellipse at 50% -18%,#5c310c55 0,transparent 48%),var(--bg);color:var(--ink);font-family:var(--font-cinzel),Georgia,serif;font-size:16px;line-height:1.6}
+.shell{width:min(1280px,calc(100% - 3rem))}
+.site-header{z-index:100;background:rgba(13,13,13,.94);border-bottom-color:#daa52066}
+.brand,.hero h1,.section-heading h2,.how h2,.movie-info h3,.seat-card h3,.order-card h3,.addon-layout h3,.payment-card h3,.panel h3,.confirmation h2,.how-grid h3,.auth-card h1,.account-page h1,.admin-page h1,.account-booking h2{font-family:var(--font-cinzel),Georgia,serif;letter-spacing:.015em}
+.hero{min-height:clamp(34rem,72vh,50rem);height:auto;margin-top:1.5rem;border:1px solid #daa52088;border-radius:.5rem;box-shadow:inset 0 0 0 8px rgba(13,13,13,.68),0 22px 70px #0008;background-image:radial-gradient(ellipse at 72% 35%,#daa52024,transparent 42%),linear-gradient(90deg,#0d0d0df5 0%,#0d0d0dc7 48%,#0d0d0d30),url("/popup-cinema-bg.avif")}
+.hero:after{inset:14px;border:1px solid #daa52088;border-radius:.35rem;pointer-events:none}
+.kicker{color:var(--gold2);letter-spacing:.16em}
+.button{border-radius:.5rem;padding:12px 18px;transition:background-color .22s ease,color .22s ease,box-shadow .22s ease,transform .22s ease}
+.button:hover{transform:translateY(-1px)}
+.gold-button{background:var(--crimson);color:var(--ivory);box-shadow:inset 0 0 0 1px #daa52080}
+.gold-button:hover{background:#730000;color:var(--ivory);box-shadow:inset 0 0 0 1px var(--gold)}
+.movie-card,.showtime,.seat-card,.order-card,.summary-card,.payment-card,.panel,.account-booking,.empty-state{border-radius:.5rem;border-color:#daa52038;box-shadow:0 2px 12px #0005}
+.movie-card:hover,.movie-card.chosen,.showtime:hover,.showtime.chosen{border-color:var(--gold);box-shadow:0 12px 32px #0008,0 0 0 1px #daa52044}
+.field input,.branch-picker,.date-pills>*,.addon,.payment-methods span{border-radius:.5rem}
+.field input:focus{outline:2px solid var(--gold);outline-offset:2px;border-color:var(--gold)}
+.seat{border-radius:.3rem}
+.seat.available{background:#123d24;color:#e7f4e9;border:1px solid #3a9b5a}
+.seat.available:hover{background:#1e6a39;color:var(--ivory)}
+.seat.selected{background:var(--gold);color:var(--midnight);box-shadow:0 0 0 2px #daa52055}
+.seat.reserved{background:#302a25;color:#8b8177}
+.trailer-scrim{z-index:300;background:#0d0d0de8}
+.trailer-dialog{border-color:var(--gold);border-radius:.5rem}
+.hero-banner{background-color:var(--midnight)}
+.hero-banner:before{content:"";position:absolute;inset:14px;z-index:2;border:1px solid #daa52088;pointer-events:none}
+.hero-banner-scrim{background:radial-gradient(ellipse at 74% 30%,#daa52024,transparent 42%),linear-gradient(90deg,rgba(13,13,13,.96) 0,rgba(13,13,13,.8) 40%,rgba(13,13,13,.28) 76%,rgba(13,13,13,.62) 100%),linear-gradient(0deg,rgba(13,13,13,.84),transparent 58%)}
+.hero-banner-copy{left:max(1.5rem,calc((100vw - 1280px)/2));right:auto;top:50%;bottom:auto;transform:translateY(-50%);width:min(38rem,52vw);gap:16px}
+.hero-banner-copy h1{font-size:clamp(2.5rem,5vw,4rem);letter-spacing:.015em;text-shadow:0 3px 24px #000a}
+.hero-banner-copy p:not(.kicker){max-width:42ch;color:#f1e7d2}
+.hero-banner-release{color:var(--gold2)!important}
+.hero-banner-arrow{background:rgba(25,21,19,.88);border-color:#daa52088}
+.hero-banner-dot.active{background:var(--gold)}
+.browse-tab.active,.dashboard-tab.active{color:var(--gold2);border-bottom-color:var(--gold)}
+.movie-strip-arrow{z-index:2;border-color:#daa52066;background:rgba(25,21,19,.92);color:var(--gold2)}
+.movie-chip,.vip-badge,.experience,.movie-releases,.trailer-button{border-radius:.35rem}
+.site-footer,.footer{border-color:#daa52055}
+.toast,.notification-toast{z-index:500}
+html[data-theme="light"]{color-scheme:light;--bg:#fffff0;--panel:#fffaf0;--panel2:#f7e7ce;--ink:#241a13;--muted:#665747;--line:#c6a86b;--bs-body-bg:#fffff0;--bs-body-color:#241a13}
+html[data-theme="light"] body{background:radial-gradient(ellipse at 50% -18%,#daa52025 0,transparent 48%),var(--bg);color:var(--ink)}
+html[data-theme="light"] .site-header{background:rgba(255,255,240,.95)}
+html[data-theme="light"] .hero{background-image:radial-gradient(ellipse at 72% 35%,#daa52030,transparent 42%),linear-gradient(90deg,#0d0d0df0 0%,#0d0d0db8 48%,#0d0d0d20),url("/popup-cinema-bg.avif")}
+@media(max-width:767px){.shell{width:calc(100% - 2rem)}.hero{min-height:36rem;margin-top:.75rem;padding:3rem 8%}.hero:after{inset:9px}.hero h1{font-size:clamp(2.5rem,11vw,3.5rem)}}
+@media(max-width:767px){.hero-banner-copy{left:1.5rem;right:1.5rem;top:auto;bottom:74px;transform:none;width:auto}.hero-banner:before{inset:8px}}
+@media(prefers-reduced-motion:reduce){.button,.movie-card,.showtime{transition:none}}
+
 /* Watchlist hearts on movie posters */
 .heart-button{position:absolute;right:10px;top:10px;width:30px;height:30px;border:1px solid var(--line);border-radius:50%;background:#0b101dcc;color:#5d6b75;font-size:16px;line-height:1;display:grid;place-items:center;cursor:pointer;z-index:2;transition:.2s}
 .heart-button:hover{color:var(--gold2);border-color:var(--gold)}

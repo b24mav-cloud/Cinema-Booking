@@ -1,21 +1,16 @@
-import { IBM_Plex_Mono, Inter, Inter_Tight } from "next/font/google";
+import { Cinzel_Decorative, JetBrains_Mono } from "next/font/google";
 
-export const inter = Inter({
+export const cinzelDecorative = Cinzel_Decorative({
   subsets: ["latin"],
   display: "swap",
-  variable: "--font-sans"
+  variable: "--font-cinzel",
+  weight: ["400", "700"]
 });
 
-export const interTight = Inter_Tight({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-display"
-});
-
-export const plexMono = IBM_Plex_Mono({
+export const jetBrainsMono = JetBrains_Mono({
   subsets: ["latin"],
   display: "swap",
   variable: "--font-mono",
-  weight: ["500", "600"],
+  weight: ["400", "500", "600", "700"],
   style: "normal"
 });
